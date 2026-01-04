@@ -3,7 +3,7 @@ const WHATSAPP_LINK = "https://wa.me/34XXXXXXXXX"; // luego lo cambiamos por el 
 export default function PresupuestoPage() {
   return (
     <main style={{ fontFamily: "Arial", padding: 24, maxWidth: 820, margin: "0 auto" }}>
-      <h1 style={{ marginTop: 10 }}>Solicitar presupuesto de orla</h1>
+      <h1 style={{ marginTop: 10 }}>Solicitar presupuesto de orla 🎓</h1>
       <p style={{ color: "#444", lineHeight: 1.5 }}>
         Cuéntanos lo básico y te respondemos rápido. Durante todo el proceso puedes hablar con Lucía.
       </p>
