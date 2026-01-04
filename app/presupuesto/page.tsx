@@ -9,47 +9,48 @@ export default function PresupuestoPage() {
       </p>
 
       <div style={{ marginTop: 16, border: "1px solid #eee", borderRadius: 14, padding: 16 }}>
-        <<form
-  onSubmit={async (e) => {
-    e.preventDefault();
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
 
-    const form = e.currentTarget as HTMLFormElement;
-    const formData = new FormData(form);
+            const form = e.currentTarget as HTMLFormElement;
+            const formData = new FormData(form);
 
-    // Mapear nombres del formulario a los campos que espera Google Sheet + Script
-    const payload = {
-      centro: String(formData.get("colegio") || ""),
-      contacto_nombre: String(formData.get("contacto") || ""),
-      contacto_email: String(formData.get("email") || ""),
-      contacto_telefono: String(formData.get("telefono") || ""),
-      ciudad: String(formData.get("zona") || ""),
-      alumnos: String(formData.get("alumnos") || ""),
-      profesores: "", // lo añadiremos luego si lo pides
-      fecha_evento: String(formData.get("fechas") || ""), // por ahora lo usamos como "fechas orientativas"
-      curso: String(formData.get("curso") || ""),
-      comentarios: String(formData.get("comentarios") || ""),
-      origen: String(formData.get("origen") || "orlas.lucialco.es"),
-    };
+            const payload = {
+              centro: String(formData.get("colegio") || ""),
+              contacto_nombre: String(formData.get("contacto") || ""),
+              contacto_email: String(formData.get("email") || ""),
+              contacto_telefono: String(formData.get("telefono") || ""),
+              ciudad: String(formData.get("zona") || ""),
+              alumnos: String(formData.get("alumnos") || ""),
+              profesores: "",
+              fecha_evento: String(formData.get("fechas") || ""),
+              curso: String(formData.get("curso") || ""),
+              comentarios: String(formData.get("comentarios") || ""),
+              origen: String(formData.get("origen") || "orlas.lucialco.es"),
+            };
 
-    const res = await fetch(
-      "https://script.google.com/macros/s/AKfycbwWgSkL_KlwiemvYWGWmO671fjIi9UXAPjobxHwZN-D5rYmnuAs4aMvGG4c3j362BLpgQ/exec",
-      {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(payload),
-      }
-    );
+            try {
+              const res = await fetch(
+                "https://script.google.com/macros/s/AKfycbwWgSkL_KlwiemvYWGWmO671fjIi9UXAPjobxHwZN-D5rYmnuAs4aMvGG4c3j362BLpgQ/exec",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "text/plain;charset=utf-8" },
+                  body: JSON.stringify(payload),
+                }
+              );
 
-    if (res.ok) {
-      alert("Solicitud enviada correctamente. Lucía se pondrá en contacto contigo.");
-      form.reset();
-    } else {
-      alert("Error al enviar el formulario. Inténtalo de nuevo.");
-    }
-  }}
-  style={{ display: "grid", gap: 12 }}
->
-
+              if (res.ok) {
+                alert("Solicitud enviada correctamente. Lucía se pondrá en contacto contigo.");
+                form.reset();
+              } else {
+                alert("Error al enviar el formulario. Inténtalo de nuevo.");
+              }
+            } catch (err) {
+              alert("Error de red. Inténtalo de nuevo.");
+            }
+          }}
+          style={{ display: "grid", gap: 12 }}
         >
           <div style={{ display: "grid", gap: 6 }}>
             <label>Centro / Colegio</label>
