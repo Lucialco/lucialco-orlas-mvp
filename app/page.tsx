@@ -1,4 +1,4 @@
-const WHATSAPP_LINK = "https://wa.me/34XXXXXXXXX"; // Cambia esto luego por el número real de Lucía
+const WHATSAPP_LINK = "https://wa.me/34606849914"; // Cambia esto luego por el número real de Lucía
 
 export default function Page() {
   return (
