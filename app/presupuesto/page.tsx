@@ -1,3 +1,6 @@
+"use client";
+export const dynamic = "force-dynamic";
+
 const WHATSAPP_LINK = "https://wa.me/34XXXXXXXXX"; // luego lo cambiamos por el número real
 
 export default function PresupuestoPage() {
