@@ -62,15 +62,37 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </Script>
       </head>
 
-      <body>
+      <body style={{ fontFamily: "Arial" }}>
         {children}
 
         {/* Footer legal */}
-        <div style={{ padding: 16, textAlign: "center", fontSize: 12 }}>
-          <a href="/aviso-legal">Aviso legal</a> |{" "}
-          <a href="/politica-privacidad">Política de privacidad</a> |{" "}
-          <a href="/politica-cookies">Política de cookies</a> |{" "}
-          <a href="#" id="open_preferences_center">
+        <div style={{ padding: 16, textAlign: "center", fontSize: 12, color: "#666" }}>
+          <a
+            href="/aviso-legal"
+            style={{ color: "#111", fontWeight: 800, textDecoration: "none" }}
+          >
+            Aviso legal
+          </a>{" "}
+          |{" "}
+          <a
+            href="/politica-privacidad"
+            style={{ color: "#111", fontWeight: 800, textDecoration: "none" }}
+          >
+            Política de privacidad
+          </a>{" "}
+          |{" "}
+          <a
+            href="/politica-cookies"
+            style={{ color: "#111", fontWeight: 800, textDecoration: "none" }}
+          >
+            Política de cookies
+          </a>{" "}
+          |{" "}
+          <a
+            href="#"
+            id="open_preferences_center"
+            style={{ color: "#111", fontWeight: 800, textDecoration: "none" }}
+          >
             Preferencias de cookies
           </a>
         </div>
