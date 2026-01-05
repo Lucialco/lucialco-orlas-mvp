@@ -13,10 +13,21 @@ jobs:
         with:
           node-version: 20
 
-      - name: Sync from Drive
+      - name: Install gdown
+        run: |
+          python3 -m pip install --upgrade pip
+          pip3 install gdown
+
+      - name: Download Drive folder to .tmp_drive
         env:
           DRIVE_FOLDER_ID: ${{ secrets.DRIVE_FOLDER_ID }}
-        run: node scripts/sync-drive-plantillas.mjs
+        run: |
+          rm -rf .tmp_drive
+          mkdir -p .tmp_drive
+          gdown --folder "https://drive.google.com/drive/folders/${DRIVE_FOLDER_ID}" -O .tmp_drive
+
+      - name: Build public/plantillas + data/plantillas.json
+        run: node scripts/sync-drive-plantillas-from-tmp.mjs
 
       - name: Commit & push
         run: |
