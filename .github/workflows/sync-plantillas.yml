@@ -1,0 +1,27 @@
+name: Sync plantillas desde Drive (simple)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Sync from Drive
+        env:
+          DRIVE_FOLDER_ID: ${{ secrets.DRIVE_FOLDER_ID }}
+        run: node scripts/sync-drive-plantillas.mjs
+
+      - name: Commit & push
+        run: |
+          git config user.name "lucialco-sync-bot"
+          git config user.email "sync@lucialco.local"
+          git add public/plantillas data/plantillas.json
+          git commit -m "Sync plantillas desde Drive" || echo "No changes"
+          git push
