@@ -2,7 +2,7 @@ const WHATSAPP_LINK = "https://wa.me/34606849914"; // Cambia esto luego por el n
 
 export default function Page() {
   return (
-    <main style={{ fontFamily: "Arial", background: "#fff" }}>
+    <main style={{ background: "#fff" }}>
       {/* Top bar */}
       <div
         style={{
