@@ -1,5 +1,46 @@
 {
-  "Guarderia": [],
+  "Guarderia": [
+    {
+      "src": "/plantillas/Guarderia/plantilla1.jpg",
+      "title": "plantilla1"
+    },
+    {
+      "src": "/plantillas/Guarderia/plantilla10.jpg",
+      "title": "plantilla10"
+    },
+    {
+      "src": "/plantillas/Guarderia/plantilla2.jpg",
+      "title": "plantilla2"
+    },
+    {
+      "src": "/plantillas/Guarderia/plantilla3.jpg",
+      "title": "plantilla3"
+    },
+    {
+      "src": "/plantillas/Guarderia/plantilla4.jpg",
+      "title": "plantilla4"
+    },
+    {
+      "src": "/plantillas/Guarderia/plantilla5.jpg",
+      "title": "plantilla5"
+    },
+    {
+      "src": "/plantillas/Guarderia/plantilla6.jpg",
+      "title": "plantilla6"
+    },
+    {
+      "src": "/plantillas/Guarderia/plantilla7.jpg",
+      "title": "plantilla7"
+    },
+    {
+      "src": "/plantillas/Guarderia/plantilla8.jpg",
+      "title": "plantilla8"
+    },
+    {
+      "src": "/plantillas/Guarderia/plantilla9.jpg",
+      "title": "plantilla9"
+    }
+  ],
   "Infantil": [],
   "Primaria": [],
   "Secundaria": [],
