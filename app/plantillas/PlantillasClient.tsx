@@ -19,21 +19,16 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
     for (const cat of CATS) {
       const items = [...(data[cat] ?? [])];
 
-      // Orden 2: en runtime (por si no quieres tocar el script)
       items.sort((a, b) => {
         const an = extractPrefixNumber(a.src);
         const bn = extractPrefixNumber(b.src);
 
         if (sortMode === "prefijo") {
-          // Si ambos tienen prefijo numérico -> por número
           if (an != null && bn != null) return an - bn;
-          // Uno con prefijo y otro no -> el con prefijo primero
           if (an != null && bn == null) return -1;
           if (an == null && bn != null) return 1;
-          // Si ninguno tiene prefijo -> alfabético por title
           return a.title.localeCompare(b.title, "es");
         }
-
         if (sortMode === "az") return a.title.localeCompare(b.title, "es");
         return b.title.localeCompare(a.title, "es");
       });
@@ -44,23 +39,39 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
   }, [data, sortMode]);
 
   return (
-    <main style={{ padding: 24, maxWidth: 1100, margin: "0 auto" }}>
-      <h1 style={{ marginTop: 10 }}>Plantillas de orlas</h1>
-      <p style={{ color: "#444", lineHeight: 1.5, marginTop: 8 }}>
+    <div>
+      <div className="badge">Plantillas · Elige una base o pide diseño exclusivo</div>
+
+      <h1 style={{ margin: "14px 0 0" }}>Plantillas de orlas</h1>
+      <p style={{ color: "var(--muted)", lineHeight: 1.5, marginTop: 8 }}>
         Elige una plantilla como base o pide diseño a medida.
       </p>
 
       <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <a href="/presupuesto?tipo=adhoc" style={ctaDark}>
+        <a href="/presupuesto?tipo=adhoc" className="btnPrimary" style={{ textDecoration: "none", display: "inline-block" }}>
           Quiero diseño a medida
         </a>
-        <a href="/presupuesto" style={ctaOutline}>
+
+        <a
+          href="/presupuesto"
+          style={{
+            textDecoration: "none",
+            border: "1px solid var(--border)",
+            color: "var(--text)",
+            background: "#fff",
+            padding: "12px 14px",
+            borderRadius: 12,
+            fontWeight: 900,
+            display: "inline-block",
+          }}
+        >
           Pedir presupuesto sin elegir ahora
         </a>
       </div>
 
       <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
         <div style={{ fontWeight: 900 }}>Orden:</div>
+
         <button onClick={() => setSortMode("prefijo")} style={sortMode === "prefijo" ? pillOn : pill}>
           Prefijo 01_, 02_…
         </button>
@@ -70,7 +81,8 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
         <button onClick={() => setSortMode("za")} style={sortMode === "za" ? pillOn : pill}>
           Z–A
         </button>
-        <div style={{ color: "#666", fontSize: 13 }}>
+
+        <div style={{ color: "var(--muted)", fontSize: 13 }}>
           Consejo: renombra en Drive con <b>01_</b>, <b>02_</b>… para control total.
         </div>
       </div>
@@ -90,11 +102,13 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
           <section key={cat} id={cat} style={{ marginTop: 34 }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
               <h2 style={{ margin: 0 }}>{labelCat(cat)}</h2>
-              <div style={{ color: "#666", fontSize: 13 }}>{items.length} plantilla(s)</div>
+              <div style={{ color: "var(--muted)", fontSize: 13 }}>{items.length} plantilla(s)</div>
             </div>
 
             {items.length === 0 ? (
-              <div style={empty}>Aún no hay plantillas en esta categoría.</div>
+              <div className="card" style={{ marginTop: 12, background: "var(--brand-soft)" }}>
+                Aún no hay plantillas en esta categoría.
+              </div>
             ) : (
               <div style={grid}>
                 {items.map((p) => (
@@ -112,29 +126,33 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
                       <img
                         src={p.src}
                         alt={p.title}
-                        style={{
-                          width: "100%",
-                          height: 170,
-                          objectFit: "cover",
-                          display: "block",
-                          borderRadius: 12,
-                          border: "1px solid #eee",
-                          background: "#fafafa",
-                        }}
+                        style={img}
                         loading="lazy"
                       />
                     </button>
 
-                    <div style={{ marginTop: 10, fontWeight: 900, color: "#111" }}>{p.title}</div>
+                    <div style={{ marginTop: 10, fontWeight: 900, color: "var(--text)" }}>{p.title}</div>
 
                     <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
                       <a
                         href={`/presupuesto?tipo=plantilla&tpl=${encodeURIComponent(p.src)}&cat=${encodeURIComponent(cat)}`}
-                        style={ctaDark}
+                        className="btnPrimary"
+                        style={{ textDecoration: "none", display: "inline-block" }}
                       >
                         Elegir esta
                       </a>
-                      <a href={p.src} target="_blank" rel="noreferrer" style={ctaLink}>
+
+                      <a
+                        href={p.src}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          textDecoration: "none",
+                          color: "var(--brand-hover)",
+                          fontWeight: 900,
+                          alignSelf: "center",
+                        }}
+                      >
                         Ver en pestaña
                       </a>
                     </div>
@@ -148,24 +166,20 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
 
       {/* LIGHTBOX */}
       {openSrc && (
-        <div
-          onClick={() => setOpenSrc(null)}
-          style={overlay}
-          role="dialog"
-          aria-modal="true"
-        >
+        <div onClick={() => setOpenSrc(null)} style={overlay} role="dialog" aria-modal="true">
           <div onClick={(e) => e.stopPropagation()} style={modal}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
               <div>
                 <div style={{ fontWeight: 900 }}>{openTitle}</div>
-                <div style={{ fontSize: 12, color: "#666" }}>{labelCat(openCat as any)}</div>
+                <div style={{ fontSize: 12, color: "var(--muted)" }}>{labelCat(openCat as any)}</div>
               </div>
+
               <button onClick={() => setOpenSrc(null)} style={closeBtn} aria-label="Cerrar">
                 ✕
               </button>
             </div>
 
-            <div style={{ marginTop: 12, borderRadius: 14, overflow: "hidden", border: "1px solid #eee" }}>
+            <div style={{ marginTop: 12, borderRadius: 14, overflow: "hidden", border: "1px solid var(--border)" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={openSrc} alt={openTitle} style={{ width: "100%", height: "auto", display: "block" }} />
             </div>
@@ -173,23 +187,38 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
             <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
               <a
                 href={`/presupuesto?tipo=plantilla&tpl=${encodeURIComponent(openSrc)}&cat=${encodeURIComponent(openCat)}`}
-                style={ctaDark}
+                className="btnPrimary"
+                style={{ textDecoration: "none" }}
               >
                 Elegir esta plantilla
               </a>
-              <a href={openSrc} target="_blank" rel="noreferrer" style={ctaOutline}>
+
+              <a
+                href={openSrc}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  textDecoration: "none",
+                  border: "1px solid var(--border)",
+                  color: "var(--text)",
+                  padding: "12px 14px",
+                  borderRadius: 12,
+                  fontWeight: 900,
+                  display: "inline-block",
+                  background: "#fff",
+                }}
+              >
                 Abrir en pestaña
               </a>
             </div>
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }
 
 function extractPrefixNumber(src: string) {
-  // src = /plantillas/Guarderia/01_algo.jpg
   const name = decodeURIComponent(src.split("/").pop() || "");
   const m = name.match(/^(\d{1,3})[_-]/);
   if (!m) return null;
@@ -221,74 +250,12 @@ const grid: React.CSSProperties = {
 };
 
 const card: React.CSSProperties = {
-  border: "1px solid #eee",
+  border: "1px solid var(--border)",
   borderRadius: 16,
   padding: 14,
   background: "white",
-};
-
-const empty: React.CSSProperties = {
-  marginTop: 12,
-  padding: 14,
-  borderRadius: 14,
-  border: "1px solid #eee",
-  background: "#fafafa",
-  color: "#555",
-  lineHeight: 1.45,
-};
-
-const chip: React.CSSProperties = {
-  textDecoration: "none",
-  border: "1px solid #111",
-  color: "#111",
-  padding: "8px 10px",
-  borderRadius: 999,
-  fontWeight: 800,
-  fontSize: 13,
-};
-
-const ctaDark: React.CSSProperties = {
-  textDecoration: "none",
-  background: "#111",
-  color: "white",
-  padding: "10px 12px",
-  borderRadius: 12,
-  fontWeight: 900,
-  display: "inline-block",
-};
-
-const ctaOutline: React.CSSProperties = {
-  textDecoration: "none",
-  border: "1px solid #111",
-  color: "#111",
-  padding: "10px 12px",
-  borderRadius: 12,
-  fontWeight: 900,
-  display: "inline-block",
-};
-
-const ctaLink: React.CSSProperties = {
-  textDecoration: "none",
-  color: "#111",
-  fontWeight: 800,
-  alignSelf: "center",
-};
-
-const pill: React.CSSProperties = {
-  border: "1px solid #111",
-  background: "white",
-  color: "#111",
-  padding: "8px 10px",
-  borderRadius: 999,
-  cursor: "pointer",
-  fontWeight: 800,
-  fontSize: 13,
-};
-
-const pillOn: React.CSSProperties = {
-  ...pill,
-  background: "#111",
-  color: "white",
+  transition: "transform 120ms ease, box-shadow 120ms ease",
+  boxShadow: "0 0 0 rgba(0,0,0,0)",
 };
 
 const imgBtn: React.CSSProperties = {
@@ -299,6 +266,45 @@ const imgBtn: React.CSSProperties = {
   cursor: "pointer",
   width: "100%",
   textAlign: "left",
+};
+
+const img: React.CSSProperties = {
+  width: "100%",
+  height: 170,
+  objectFit: "cover",
+  display: "block",
+  borderRadius: 12,
+  border: "1px solid var(--border)",
+  background: "var(--brand-soft)",
+};
+
+const chip: React.CSSProperties = {
+  textDecoration: "none",
+  border: "1px solid var(--border)",
+  color: "var(--text)",
+  background: "#fff",
+  padding: "8px 10px",
+  borderRadius: 999,
+  fontWeight: 900,
+  fontSize: 13,
+};
+
+const pill: React.CSSProperties = {
+  border: "1px solid var(--border)",
+  background: "white",
+  color: "var(--text)",
+  padding: "8px 10px",
+  borderRadius: 999,
+  cursor: "pointer",
+  fontWeight: 900,
+  fontSize: 13,
+};
+
+const pillOn: React.CSSProperties = {
+  ...pill,
+  background: "var(--brand-soft)",
+  border: "1px solid var(--brand)",
+  color: "var(--brand-hover)",
 };
 
 const overlay: React.CSSProperties = {
@@ -317,11 +323,11 @@ const modal: React.CSSProperties = {
   background: "white",
   borderRadius: 18,
   padding: 14,
-  border: "1px solid #eee",
+  border: "1px solid var(--border)",
 };
 
 const closeBtn: React.CSSProperties = {
-  border: "1px solid #ddd",
+  border: "1px solid var(--border)",
   background: "white",
   borderRadius: 12,
   padding: "8px 10px",
