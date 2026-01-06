@@ -3,38 +3,117 @@
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-const WHATSAPP_LINK = "https://wa.me/34606849914";
+const LUCIA_PHONE_E164 = "34606849914"; // sin +, formato wa.me
+const WHATSAPP_LINK = `https://wa.me/${LUCIA_PHONE_E164}`;
+
+const PRICE = {
+  plantilla: 12.5,
+  exclusiva: 14.5,
+  extra_beca: 8,
+  extra_taza: 5,
+  extra_sobre: 3,
+  iva_pct: 21,
+} as const;
+
+type Status = "idle" | "sending" | "sent" | "error";
+type EstadoPresupuesto = "informativo" | "interesado";
+type TipoOrla = "plantilla" | "exclusiva";
+
+function toIntSafe(v: unknown, fallback = 0) {
+  const n = Number(String(v ?? "").replace(",", "."));
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(0, Math.trunc(n));
+}
+
+function round2(n: number) {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
+// Normaliza a formato wa.me (solo dígitos) asumiendo ES si no hay prefijo
+function normalizePhoneForWhatsApp(input: string) {
+  const digits = String(input || "").replace(/\D/g, "");
+  if (!digits) return "";
+  // Si ya parece tener prefijo país (>= 11 dígitos), lo dejamos
+  if (digits.length >= 11) return digits;
+  // España típico: 9 dígitos
+  if (digits.length === 9) return `34${digits}`;
+  // Si viene raro, devolvemos lo que haya
+  return digits;
+}
 
 export default function PresupuestoClient() {
   const router = useRouter();
   const sp = useSearchParams();
 
-  const tipo = sp.get("tipo") || "";
+  const tipoQS = sp.get("tipo") || ""; // "plantilla" | "adhoc" (en tu sistema actual)
   const tpl = sp.get("tpl") || "";
   const cat = sp.get("cat") || "";
 
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const tipoOrla: TipoOrla = useMemo(() => {
+    // tu querystring usa "adhoc" para diseño a medida: lo mapeamos a "exclusiva"
+    if (tipoQS === "plantilla") return "plantilla";
+    if (tipoQS === "adhoc") return "exclusiva";
+    // fallback: si viene con tpl asumimos plantilla
+    if (tpl) return "plantilla";
+    return "exclusiva";
+  }, [tipoQS, tpl]);
+
+  const [status, setStatus] = useState<Status>("idle");
+  const [estado, setEstado] = useState<EstadoPresupuesto>("informativo");
+
+  // Extras
+  const [extraBeca, setExtraBeca] = useState(false);
+  const [extraTaza, setExtraTaza] = useState(false);
+  const [extraSobre, setExtraSobre] = useState(false);
+
+  // Para cálculo en vivo
+  const [alumnosStr, setAlumnosStr] = useState("");
+
+  const alumnos = useMemo(() => toIntSafe(alumnosStr, 0), [alumnosStr]);
 
   const banner = useMemo(() => {
-    if (tipo === "plantilla" && tpl) {
+    if (tipoOrla === "plantilla" && tpl) {
       const name = decodeURIComponent(tpl.split("/").pop() || "Plantilla");
       return { mode: "plantilla" as const, title: name };
     }
-    if (tipo === "adhoc") return { mode: "adhoc" as const, title: "Diseño a medida" };
-    return null;
-  }, [tipo, tpl]);
+    return { mode: "exclusiva" as const, title: "Diseño exclusivo" };
+  }, [tipoOrla, tpl]);
+
+  const calc = useMemo(() => {
+    const unitBase = tipoOrla === "plantilla" ? PRICE.plantilla : PRICE.exclusiva;
+    const baseSinIva = alumnos * unitBase;
+
+    const extrasSinIva =
+      alumnos * (extraBeca ? PRICE.extra_beca : 0) +
+      alumnos * (extraTaza ? PRICE.extra_taza : 0) +
+      alumnos * (extraSobre ? PRICE.extra_sobre : 0);
+
+    const subtotalSinIva = baseSinIva + extrasSinIva;
+    const iva = subtotalSinIva * (PRICE.iva_pct / 100);
+    const totalConIva = subtotalSinIva + iva;
+
+    return {
+      unitBase: round2(unitBase),
+      baseSinIva: round2(baseSinIva),
+      extrasSinIva: round2(extrasSinIva),
+      subtotalSinIva: round2(subtotalSinIva),
+      ivaPct: PRICE.iva_pct,
+      iva: round2(iva),
+      totalConIva: round2(totalConIva),
+    };
+  }, [tipoOrla, alumnos, extraBeca, extraTaza, extraSobre]);
 
   return (
     <main style={{ fontFamily: "Arial", padding: 24, maxWidth: 820, margin: "0 auto" }}>
       <h1 style={{ marginTop: 10 }}>Solicitar presupuesto de orla 🎓</h1>
       <p style={{ color: "#444", lineHeight: 1.5 }}>
-        Cuéntanos lo básico y te respondemos rápido. Durante todo el proceso puedes hablar con Lucía.
+        Elige el tipo de orla, añade extras si quieres y te enviamos el presupuesto por email (validez 15 días).
       </p>
 
       {banner && (
         <div style={bannerBox}>
           <div style={{ fontWeight: 900 }}>
-            {banner.mode === "plantilla" ? "Has elegido una plantilla" : "Has elegido diseño a medida"}
+            {banner.mode === "plantilla" ? "Has elegido una plantilla" : "Has elegido diseño exclusivo"}
           </div>
 
           {banner.mode === "plantilla" && tpl && (
@@ -57,9 +136,9 @@ export default function PresupuestoClient() {
             </div>
           )}
 
-          {banner.mode === "adhoc" && (
+          {banner.mode !== "plantilla" && (
             <div style={{ marginTop: 8, color: "#444" }}>
-              Perfecto. Indícanos en comentarios el estilo o referencias si quieres.
+              Perfecto. En comentarios puedes indicar temática, referencias o estilo.
             </div>
           )}
         </div>
@@ -71,27 +150,66 @@ export default function PresupuestoClient() {
             e.preventDefault();
             if (status === "sending") return;
 
+            // Validación mínima (num alumnos)
+            const alumnosN = toIntSafe(alumnosStr, 0);
+            if (alumnosN <= 0) {
+              setStatus("error");
+              return;
+            }
+
             setStatus("sending");
 
             const form = e.currentTarget as HTMLFormElement;
             const formData = new FormData(form);
 
-            const payload = {
-              centro: String(formData.get("colegio") || ""),
-              contacto_nombre: String(formData.get("contacto") || ""),
-              contacto_email: String(formData.get("email") || ""),
-              contacto_telefono: String(formData.get("telefono") || ""),
-              ciudad: String(formData.get("zona") || ""),
-              alumnos: String(formData.get("alumnos") || ""),
-              profesores: "",
-              fecha_evento: String(formData.get("fechas") || ""),
-              curso: String(formData.get("curso") || ""),
-              comentarios: String(formData.get("comentarios") || ""),
+            const telefonoRaw = String(formData.get("telefono") || "");
+            const telefonoWa = normalizePhoneForWhatsApp(telefonoRaw);
 
-              tipo_orla: tipo || "",
+            const payload = {
+              // Datos del centro/contacto
+              centro: String(formData.get("colegio") || "").trim(),
+              contacto_nombre: String(formData.get("contacto") || "").trim(),
+              contacto_email: String(formData.get("email") || "").trim(),
+              contacto_telefono: telefonoRaw.trim(),
+              contacto_telefono_wa: telefonoWa, // para link directo wa.me
+              ciudad: String(formData.get("zona") || "").trim(),
+              fecha_evento: String(formData.get("fechas") || "").trim(),
+              curso: String(formData.get("curso") || "").trim(),
+              comentarios: String(formData.get("comentarios") || "").trim(),
+
+              // Presupuesto (nuevo)
+              estado: estado, // "informativo" | "interesado"
+              tipo_orla: tipoOrla, // "plantilla" | "exclusiva"
+              alumnos: alumnosN, // number
+              extras: {
+                beca_graduacion: extraBeca,
+                taza: extraTaza,
+                sobre_reforzado: extraSobre,
+              },
+
+              // Plantilla (si aplica)
               plantilla_url: tpl || "",
               categoria_plantilla: cat || "",
 
+              // Totales calculados (nuevo)
+              precios: {
+                unit_base_sin_iva: calc.unitBase,
+                base_sin_iva: calc.baseSinIva,
+                extras_sin_iva: calc.extrasSinIva,
+                subtotal_sin_iva: calc.subtotalSinIva,
+                iva_pct: calc.ivaPct,
+                iva: calc.iva,
+                total_con_iva: calc.totalConIva,
+              },
+
+              // WhatsApp (para emails)
+              whatsapp: {
+                lucia_phone_wa: LUCIA_PHONE_E164,
+                link_cliente_a_lucia: `https://wa.me/${LUCIA_PHONE_E164}`,
+                link_lucia_a_cliente: telefonoWa ? `https://wa.me/${telefonoWa}` : "",
+              },
+
+              validez_dias: 15,
               origen: "orlas.lucialco.es",
             };
 
@@ -108,6 +226,12 @@ export default function PresupuestoClient() {
               if (res.ok) {
                 setStatus("sent");
                 form.reset();
+                // reseteo de estados controlados
+                setEstado("informativo");
+                setExtraBeca(false);
+                setExtraTaza(false);
+                setExtraSobre(false);
+                setAlumnosStr("");
                 setTimeout(() => router.push("/"), 2500);
               } else {
                 setStatus("error");
@@ -126,8 +250,19 @@ export default function PresupuestoClient() {
             <input name="curso" required placeholder="Ej: 6º Primaria / 2º Bach" style={inp} />
           </Field>
 
-          <Field label="Número aproximado de alumnos">
-            <input name="alumnos" required placeholder="Ej: 45" style={inp} />
+          <Field label="Número de alumnos">
+            <input
+              name="alumnos"
+              required
+              inputMode="numeric"
+              type="number"
+              min={1}
+              step={1}
+              placeholder="Ej: 45"
+              style={inp}
+              value={alumnosStr}
+              onChange={(e) => setAlumnosStr(e.target.value)}
+            />
           </Field>
 
           <Field label="Ciudad / Provincia">
@@ -150,22 +285,110 @@ export default function PresupuestoClient() {
             <input name="email" type="email" required placeholder="tu@email.com" style={inp} />
           </Field>
 
+          {/* Estado */}
+          <div style={{ display: "grid", gap: 6 }}>
+            <label>¿Qué quieres hacer ahora?</label>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <label style={pill(estado === "informativo")}>
+                <input
+                  type="radio"
+                  name="estado"
+                  value="informativo"
+                  checked={estado === "informativo"}
+                  onChange={() => setEstado("informativo")}
+                  style={{ marginRight: 8 }}
+                />
+                Solo quiero el presupuesto (informativo)
+              </label>
+
+              <label style={pill(estado === "interesado")}>
+                <input
+                  type="radio"
+                  name="estado"
+                  value="interesado"
+                  checked={estado === "interesado"}
+                  onChange={() => setEstado("interesado")}
+                  style={{ marginRight: 8 }}
+                />
+                Estoy interesado (quiero seguir)
+              </label>
+            </div>
+          </div>
+
+          {/* Extras */}
+          <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 12, background: "#fafafa" }}>
+            <div style={{ fontWeight: 900, marginBottom: 8 }}>Extras opcionales</div>
+
+            <label style={checkRow}>
+              <input type="checkbox" checked={extraBeca} onChange={(e) => setExtraBeca(e.target.checked)} />
+              <span>
+                Beca de graduación personalizada (cole) — <b>8,00 €</b> / niñ@
+              </span>
+            </label>
+
+            <label style={checkRow}>
+              <input type="checkbox" checked={extraTaza} onChange={(e) => setExtraTaza(e.target.checked)} />
+              <span>
+                Taza con foto — <b>5,00 €</b> / niñ@
+              </span>
+            </label>
+
+            <label style={checkRow}>
+              <input type="checkbox" checked={extraSobre} onChange={(e) => setExtraSobre(e.target.checked)} />
+              <span>
+                Sobres reforzados con nombre — <b>3,00 €</b> / niñ@
+              </span>
+            </label>
+          </div>
+
+          {/* Resumen */}
+          <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 12 }}>
+            <div style={{ fontWeight: 900, marginBottom: 8 }}>Resumen estimado</div>
+            <div style={row}>
+              <span>
+                Orla {tipoOrla === "plantilla" ? "plantilla" : "diseño exclusivo"} ({calc.unitBase} € / niñ@) × {alumnos || 0}
+              </span>
+              <b>{calc.baseSinIva.toFixed(2)} €</b>
+            </div>
+            <div style={row}>
+              <span>Extras</span>
+              <b>{calc.extrasSinIva.toFixed(2)} €</b>
+            </div>
+            <div style={row}>
+              <span>Subtotal (sin IVA)</span>
+              <b>{calc.subtotalSinIva.toFixed(2)} €</b>
+            </div>
+            <div style={row}>
+              <span>IVA ({calc.ivaPct}%)</span>
+              <b>{calc.iva.toFixed(2)} €</b>
+            </div>
+            <div style={{ ...row, borderTop: "1px dashed #ddd", paddingTop: 10, marginTop: 10 }}>
+              <span style={{ fontWeight: 900 }}>TOTAL</span>
+              <span style={{ fontWeight: 900 }}>{calc.totalConIva.toFixed(2)} €</span>
+            </div>
+
+            <div style={{ marginTop: 8, fontSize: 12, color: "#666", lineHeight: 1.45 }}>
+              Este cálculo es orientativo. El presupuesto que recibirás por email tendrá <b>validez 15 días</b> y quedará marcado como{" "}
+              <b>{estado === "informativo" ? "SOLO INFORMATIVO" : "INTERESADO"}</b>.
+            </div>
+          </div>
+
           <Field label="Comentarios (opcional)">
-            <textarea name="comentarios" placeholder="Detalles, necesidades, etc." rows={4} style={txt} />
+            <textarea name="comentarios" placeholder="Temática, estilo, referencias, necesidades, etc." rows={4} style={txt} />
           </Field>
 
           <button type="submit" style={btn} disabled={status === "sending"}>
-            {status === "sending" ? "Enviando..." : "Enviar solicitud"}
+            {status === "sending" ? "Enviando..." : "Enviar presupuesto"}
           </button>
 
-          {status === "sent" && <div style={okBox}>✅ Formulario enviado. En unos segundos volvemos a la página principal.</div>}
+          {status === "sent" && <div style={okBox}>✅ Enviado. Te llegará por email (y a Lucía) con validez 15 días.</div>}
           {status === "error" && (
-            <div style={errBox}>❌ No se pudo enviar. Prueba de nuevo o escribe a Lucía por WhatsApp.</div>
+            <div style={errBox}>❌ No se pudo enviar. Revisa el número de alumnos o escribe a Lucía por WhatsApp.</div>
           )}
         </form>
 
         <p style={{ marginTop: 10, fontSize: 13, color: "#666", lineHeight: 1.45 }}>
-          Una vez aceptado el presupuesto, se abona una <b>señal del 15%</b> para reservar fecha de fotos.
+          Nota: el presupuesto se envía por email. Si estás <b>interesado</b>, Lucía podrá ayudarte a cerrar fechas y siguientes pasos.
         </p>
       </div>
 
@@ -196,3 +419,21 @@ const linkBtn: React.CSSProperties = { display: "inline-block", textDecoration: 
 
 const okBox: React.CSSProperties = { marginTop: 10, padding: 12, borderRadius: 12, background: "#ecfdf5", border: "1px solid #a7f3d0", color: "#065f46", fontWeight: 800 };
 const errBox: React.CSSProperties = { marginTop: 10, padding: 12, borderRadius: 12, background: "#fef2f2", border: "1px solid #fecaca", color: "#7f1d1d", fontWeight: 800 };
+
+const checkRow: React.CSSProperties = { display: "flex", gap: 10, alignItems: "center", padding: "6px 0" };
+const row: React.CSSProperties = { display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline", padding: "4px 0" };
+
+function pill(active: boolean): React.CSSProperties {
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 8,
+    border: "1px solid #ddd",
+    borderRadius: 999,
+    padding: "8px 12px",
+    background: active ? "#111" : "white",
+    color: active ? "white" : "#111",
+    fontWeight: 800,
+    cursor: "pointer",
+  };
+}
