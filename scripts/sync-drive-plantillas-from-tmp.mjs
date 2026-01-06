@@ -22,14 +22,28 @@ function titleFromFile(f) {
     .trim();
 }
 
-function findRootDownloadedFolder() {
-  // gdown crea una carpeta con el nombre real dentro de .tmp_drive
-  const entries = fs.readdirSync(TMP).map((n) => path.join(TMP, n));
-  const dirs = entries.filter((p) => fs.statSync(p).isDirectory());
-  if (!dirs.length) return null;
+function isDir(p) {
+  return fs.existsSync(p) && fs.statSync(p).isDirectory();
+}
 
-  // Si hay varias, coge la primera (suele ser la carpeta raíz)
-  return dirs[0];
+function hasCategoryFolders(rootDir) {
+  return CATEGORIES.some((c) => isDir(path.join(rootDir, c)));
+}
+
+function findBestRoot() {
+  // Caso 1: gdown descarga las carpetas de categoría directamente en .tmp_drive
+  if (hasCategoryFolders(TMP)) return TMP;
+
+  // Caso 2: gdown crea una carpeta raíz dentro de .tmp_drive (p.ej. "Lucialco_Orlas")
+  const entries = fs.readdirSync(TMP).map((n) => path.join(TMP, n)).filter(isDir);
+
+  // Busca la primera subcarpeta que contenga categorías
+  for (const d of entries) {
+    if (hasCategoryFolders(d)) return d;
+  }
+
+  // Si no encuentra, devuelve null
+  return null;
 }
 
 function listJpgFiles(dir) {
@@ -43,11 +57,12 @@ function listJpgFiles(dir) {
 async function main() {
   if (!fs.existsSync(TMP)) throw new Error("No existe .tmp_drive (falló la descarga de Drive).");
 
-  const srcRoot = findRootDownloadedFolder();
-  if (!srcRoot)
+  const srcRoot = findBestRoot();
+  if (!srcRoot) {
     throw new Error(
-      "No se encontró carpeta descargada en .tmp_drive. Revisa que la carpeta de Drive esté compartida como 'Cualquiera con el enlace' (Lector)."
+      "No se encontraron carpetas de categorías en lo descargado. Revisa: (1) nombres exactos de carpetas en Drive (Guarderia/Infantil/Primaria/Secundaria/Bachillerato), (2) que la carpeta Drive esté compartida como 'Cualquiera con el enlace' (Lector)."
     );
+  }
 
   clean(OUT);
   ensure(OUT);
@@ -76,3 +91,4 @@ main().catch((e) => {
   console.error(e);
   process.exit(1);
 });
+
