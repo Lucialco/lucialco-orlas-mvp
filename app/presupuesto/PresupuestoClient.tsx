@@ -33,11 +33,8 @@ function round2(n: number) {
 function normalizePhoneForWhatsApp(input: string) {
   const digits = String(input || "").replace(/\D/g, "");
   if (!digits) return "";
-  // Si ya parece tener prefijo país (>= 11 dígitos), lo dejamos
-  if (digits.length >= 11) return digits;
-  // España típico: 9 dígitos
-  if (digits.length === 9) return `34${digits}`;
-  // Si viene raro, devolvemos lo que haya
+  if (digits.length >= 11) return digits; // ya tiene prefijo país
+  if (digits.length === 9) return `34${digits}`; // ES
   return digits;
 }
 
@@ -45,15 +42,13 @@ export default function PresupuestoClient() {
   const router = useRouter();
   const sp = useSearchParams();
 
-  const tipoQS = sp.get("tipo") || ""; // "plantilla" | "adhoc" (en tu sistema actual)
+  const tipoQS = sp.get("tipo") || ""; // "plantilla" | "adhoc"
   const tpl = sp.get("tpl") || "";
   const cat = sp.get("cat") || "";
 
   const tipoOrla: TipoOrla = useMemo(() => {
-    // tu querystring usa "adhoc" para diseño a medida: lo mapeamos a "exclusiva"
     if (tipoQS === "plantilla") return "plantilla";
     if (tipoQS === "adhoc") return "exclusiva";
-    // fallback: si viene con tpl asumimos plantilla
     if (tpl) return "plantilla";
     return "exclusiva";
   }, [tipoQS, tpl]);
@@ -68,7 +63,6 @@ export default function PresupuestoClient() {
 
   // Para cálculo en vivo
   const [alumnosStr, setAlumnosStr] = useState("");
-
   const alumnos = useMemo(() => toIntSafe(alumnosStr, 0), [alumnosStr]);
 
   const banner = useMemo(() => {
@@ -104,14 +98,16 @@ export default function PresupuestoClient() {
   }, [tipoOrla, alumnos, extraBeca, extraTaza, extraSobre]);
 
   return (
-    <main style={{ fontFamily: "Arial", padding: 24, maxWidth: 820, margin: "0 auto" }}>
-      <h1 style={{ marginTop: 10 }}>Solicitar presupuesto de orla 🎓</h1>
-      <p style={{ color: "#444", lineHeight: 1.5 }}>
+    <div>
+      <div className="badge">Presupuesto · Validez 15 días · IVA 21%</div>
+
+      <h1 style={{ marginTop: 14 }}>Solicitar presupuesto de orla 🎓</h1>
+      <p style={{ color: "var(--muted)", lineHeight: 1.5 }}>
         Elige el tipo de orla, añade extras si quieres y te enviamos el presupuesto por email (validez 15 días).
       </p>
 
       {banner && (
-        <div style={bannerBox}>
+        <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
           <div style={{ fontWeight: 900 }}>
             {banner.mode === "plantilla" ? "Has elegido una plantilla" : "Has elegido diseño exclusivo"}
           </div>
@@ -122,13 +118,25 @@ export default function PresupuestoClient() {
               <img
                 src={tpl}
                 alt={banner.title}
-                style={{ width: 120, height: 78, objectFit: "cover", borderRadius: 12, border: "1px solid #eee" }}
+                style={{ width: 120, height: 78, objectFit: "cover", borderRadius: 12, border: "1px solid var(--border)" }}
               />
               <div>
                 <div style={{ fontWeight: 900 }}>{banner.title}</div>
-                <div style={{ color: "#666", fontSize: 13 }}>{cat ? `Categoría: ${cat}` : ""}</div>
+                <div style={{ color: "var(--muted)", fontSize: 13 }}>{cat ? `Categoría: ${cat}` : ""}</div>
                 <div style={{ marginTop: 8 }}>
-                  <a href="/plantillas" style={linkBtn}>
+                  <a
+                    href="/plantillas"
+                    style={{
+                      display: "inline-block",
+                      textDecoration: "none",
+                      border: "1px solid var(--border)",
+                      borderRadius: 12,
+                      padding: "8px 10px",
+                      fontWeight: 900,
+                      color: "var(--text)",
+                      background: "#fff",
+                    }}
+                  >
                     Cambiar plantilla
                   </a>
                 </div>
@@ -137,20 +145,19 @@ export default function PresupuestoClient() {
           )}
 
           {banner.mode !== "plantilla" && (
-            <div style={{ marginTop: 8, color: "#444" }}>
+            <div style={{ marginTop: 8, color: "var(--muted)" }}>
               Perfecto. En comentarios puedes indicar temática, referencias o estilo.
             </div>
           )}
         </div>
       )}
 
-      <div style={{ marginTop: 16, border: "1px solid #eee", borderRadius: 14, padding: 16 }}>
+      <div className="card" style={{ marginTop: 16 }}>
         <form
           onSubmit={async (e) => {
             e.preventDefault();
             if (status === "sending") return;
 
-            // Validación mínima (num alumnos)
             const alumnosN = toIntSafe(alumnosStr, 0);
             if (alumnosN <= 0) {
               setStatus("error");
@@ -166,32 +173,28 @@ export default function PresupuestoClient() {
             const telefonoWa = normalizePhoneForWhatsApp(telefonoRaw);
 
             const payload = {
-              // Datos del centro/contacto
               centro: String(formData.get("colegio") || "").trim(),
               contacto_nombre: String(formData.get("contacto") || "").trim(),
               contacto_email: String(formData.get("email") || "").trim(),
               contacto_telefono: telefonoRaw.trim(),
-              contacto_telefono_wa: telefonoWa, // para link directo wa.me
+              contacto_telefono_wa: telefonoWa,
               ciudad: String(formData.get("zona") || "").trim(),
               fecha_evento: String(formData.get("fechas") || "").trim(),
               curso: String(formData.get("curso") || "").trim(),
               comentarios: String(formData.get("comentarios") || "").trim(),
 
-              // Presupuesto (nuevo)
-              estado: estado, // "informativo" | "interesado"
-              tipo_orla: tipoOrla, // "plantilla" | "exclusiva"
-              alumnos: alumnosN, // number
+              estado: estado,
+              tipo_orla: tipoOrla,
+              alumnos: alumnosN,
               extras: {
                 beca_graduacion: extraBeca,
                 taza: extraTaza,
                 sobre_reforzado: extraSobre,
               },
 
-              // Plantilla (si aplica)
               plantilla_url: tpl || "",
               categoria_plantilla: cat || "",
 
-              // Totales calculados (nuevo)
               precios: {
                 unit_base_sin_iva: calc.unitBase,
                 base_sin_iva: calc.baseSinIva,
@@ -202,7 +205,6 @@ export default function PresupuestoClient() {
                 total_con_iva: calc.totalConIva,
               },
 
-              // WhatsApp (para emails)
               whatsapp: {
                 lucia_phone_wa: LUCIA_PHONE_E164,
                 link_cliente_a_lucia: `https://wa.me/${LUCIA_PHONE_E164}`,
@@ -214,20 +216,18 @@ export default function PresupuestoClient() {
             };
 
             try {
-           const res = await fetch(
-              "https://script.google.com/macros/s/AKfycbx1eSfdm0xzI_2spF0ns9Qqowxu4PHV6uAJsW7G5c72A787DqUpwuKDSDiMTsrathWy/exec",
-              {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify(payload),
-              }
-           );
-
+              const res = await fetch(
+                "https://script.google.com/macros/s/AKfycbx1eSfdm0xzI_2spF0ns9Qqowxu4PHV6uAJsW7G5c72A787DqUpwuKDSDiMTsrathWy/exec",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "text/plain;charset=utf-8" },
+                  body: JSON.stringify(payload),
+                }
+              );
 
               if (res.ok) {
                 setStatus("sent");
                 form.reset();
-                // reseteo de estados controlados
                 setEstado("informativo");
                 setExtraBeca(false);
                 setExtraTaza(false);
@@ -317,7 +317,7 @@ export default function PresupuestoClient() {
           </div>
 
           {/* Extras */}
-          <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 12, background: "#fafafa" }}>
+          <div className="card" style={{ background: "var(--brand-soft)" }}>
             <div style={{ fontWeight: 900, marginBottom: 8 }}>Extras opcionales</div>
 
             <label style={checkRow}>
@@ -343,32 +343,37 @@ export default function PresupuestoClient() {
           </div>
 
           {/* Resumen */}
-          <div style={{ border: "1px solid #eee", borderRadius: 12, padding: 12 }}>
+          <div className="card">
             <div style={{ fontWeight: 900, marginBottom: 8 }}>Resumen estimado</div>
+
             <div style={row}>
               <span>
                 Orla {tipoOrla === "plantilla" ? "plantilla" : "diseño exclusivo"} ({calc.unitBase} € / niñ@) × {alumnos || 0}
               </span>
               <b>{calc.baseSinIva.toFixed(2)} €</b>
             </div>
+
             <div style={row}>
               <span>Extras</span>
               <b>{calc.extrasSinIva.toFixed(2)} €</b>
             </div>
+
             <div style={row}>
               <span>Subtotal (sin IVA)</span>
               <b>{calc.subtotalSinIva.toFixed(2)} €</b>
             </div>
+
             <div style={row}>
               <span>IVA ({calc.ivaPct}%)</span>
               <b>{calc.iva.toFixed(2)} €</b>
             </div>
-            <div style={{ ...row, borderTop: "1px dashed #ddd", paddingTop: 10, marginTop: 10 }}>
+
+            <div style={{ ...row, borderTop: "1px dashed var(--border)", paddingTop: 10, marginTop: 10 }}>
               <span style={{ fontWeight: 900 }}>TOTAL</span>
               <span style={{ fontWeight: 900 }}>{calc.totalConIva.toFixed(2)} €</span>
             </div>
 
-            <div style={{ marginTop: 8, fontSize: 12, color: "#666", lineHeight: 1.45 }}>
+            <div style={{ marginTop: 8, fontSize: 12, color: "var(--muted)", lineHeight: 1.45 }}>
               Este cálculo es orientativo. El presupuesto que recibirás por email tendrá <b>validez 15 días</b> y quedará marcado como{" "}
               <b>{estado === "informativo" ? "SOLO INFORMATIVO" : "INTERESADO"}</b>.
             </div>
@@ -378,48 +383,76 @@ export default function PresupuestoClient() {
             <textarea name="comentarios" placeholder="Temática, estilo, referencias, necesidades, etc." rows={4} style={txt} />
           </Field>
 
-          <button type="submit" style={btn} disabled={status === "sending"}>
+          <button type="submit" className="btnPrimary" disabled={status === "sending"}>
             {status === "sending" ? "Enviando..." : "Enviar presupuesto"}
           </button>
 
-          {status === "sent" && <div style={okBox}>✅ Enviado. Te llegará por email (y a Lucía) con validez 15 días.</div>}
+          {status === "sent" && (
+            <div style={okBox}>✅ Enviado. Te llegará por email con validez 15 días.</div>
+          )}
+
           {status === "error" && (
             <div style={errBox}>❌ No se pudo enviar. Revisa el número de alumnos o escribe a Lucía por WhatsApp.</div>
           )}
         </form>
 
-        <p style={{ marginTop: 10, fontSize: 13, color: "#666", lineHeight: 1.45 }}>
+        <p style={{ marginTop: 10, fontSize: 13, color: "var(--muted)", lineHeight: 1.45 }}>
           Nota: el presupuesto se envía por email. Si estás <b>interesado</b>, Lucía podrá ayudarte a cerrar fechas y siguientes pasos.
         </p>
       </div>
 
       <div style={{ marginTop: 14 }}>
-        <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer" style={{ color: "#111", fontWeight: 800, textDecoration: "none" }}>
+        <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer" style={{ color: "var(--brand-hover)", fontWeight: 900, textDecoration: "none" }}>
           💬 Si prefieres, escribe directamente a Lucía por WhatsApp
         </a>
       </div>
-    </main>
+    </div>
   );
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ display: "grid", gap: 6 }}>
-      <label>{label}</label>
+      <label style={{ fontWeight: 800 }}>{label}</label>
       {children}
     </div>
   );
 }
 
-const inp: React.CSSProperties = { padding: "12px 12px", borderRadius: 10, border: "1px solid #ddd", fontSize: 14 };
-const txt: React.CSSProperties = { padding: "12px 12px", borderRadius: 10, border: "1px solid #ddd", fontSize: 14, resize: "vertical" };
-const btn: React.CSSProperties = { background: "#111", color: "white", padding: "12px 14px", borderRadius: 12, border: "none", fontWeight: 900, cursor: "pointer" };
+const inp: React.CSSProperties = {
+  padding: "12px 12px",
+  borderRadius: 10,
+  border: "1px solid var(--border)",
+  fontSize: 14,
+};
 
-const bannerBox: React.CSSProperties = { marginTop: 14, border: "1px solid #eee", borderRadius: 16, padding: 14, background: "#fafafa" };
-const linkBtn: React.CSSProperties = { display: "inline-block", textDecoration: "none", border: "1px solid #111", borderRadius: 12, padding: "8px 10px", fontWeight: 900, color: "#111" };
+const txt: React.CSSProperties = {
+  padding: "12px 12px",
+  borderRadius: 10,
+  border: "1px solid var(--border)",
+  fontSize: 14,
+  resize: "vertical",
+};
 
-const okBox: React.CSSProperties = { marginTop: 10, padding: 12, borderRadius: 12, background: "#ecfdf5", border: "1px solid #a7f3d0", color: "#065f46", fontWeight: 800 };
-const errBox: React.CSSProperties = { marginTop: 10, padding: 12, borderRadius: 12, background: "#fef2f2", border: "1px solid #fecaca", color: "#7f1d1d", fontWeight: 800 };
+const okBox: React.CSSProperties = {
+  marginTop: 10,
+  padding: 12,
+  borderRadius: 12,
+  background: "var(--brand-soft)",
+  border: "1px solid var(--border)",
+  color: "var(--brand-hover)",
+  fontWeight: 900,
+};
+
+const errBox: React.CSSProperties = {
+  marginTop: 10,
+  padding: 12,
+  borderRadius: 12,
+  background: "#fef2f2",
+  border: "1px solid #fecaca",
+  color: "#7f1d1d",
+  fontWeight: 900,
+};
 
 const checkRow: React.CSSProperties = { display: "flex", gap: 10, alignItems: "center", padding: "6px 0" };
 const row: React.CSSProperties = { display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline", padding: "4px 0" };
@@ -429,12 +462,12 @@ function pill(active: boolean): React.CSSProperties {
     display: "inline-flex",
     alignItems: "center",
     gap: 8,
-    border: "1px solid #ddd",
+    border: active ? "1px solid var(--brand)" : "1px solid var(--border)",
     borderRadius: 999,
     padding: "8px 12px",
-    background: active ? "#111" : "white",
-    color: active ? "white" : "#111",
-    fontWeight: 800,
+    background: active ? "var(--brand-soft)" : "white",
+    color: active ? "var(--brand-hover)" : "var(--text)",
+    fontWeight: 900,
     cursor: "pointer",
   };
 }
