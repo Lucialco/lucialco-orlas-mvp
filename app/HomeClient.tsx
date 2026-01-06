@@ -1,14 +1,9 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
-
 export default function HomeClient() {
-  const sp = useSearchParams();
-  // ejemplo: const foo = sp.get("foo");
-
   return (
     <>
-      {/* TU JSX */}
+      {/* PEGA AQUÍ TODO EL JSX DE TU HOME (lo que tenías antes en app/page.tsx) */}
     </>
   );
 }
