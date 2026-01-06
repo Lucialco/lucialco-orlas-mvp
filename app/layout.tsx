@@ -1,5 +1,8 @@
 import Script from "next/script";
 import type { ReactNode } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import "./globals.css";
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -62,40 +65,49 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </Script>
       </head>
 
-      <body style={{ fontFamily: "Arial" }}>
-        {children}
+      <body>
+        {/* Header de marca */}
+        <header className="siteHeader">
+          <div className="siteHeaderInner">
+            <Link href="/" className="brand" aria-label="Lucialco Orlas">
+              <Image
+                src="/brand/logo.jpg"
+                alt="Lucialco Orlas"
+                width={220}
+                height={70}
+                priority
+                style={{ height: "46px", width: "auto" }}
+              />
+            </Link>
 
-        {/* Footer legal */}
-        <div style={{ padding: 16, textAlign: "center", fontSize: 12, color: "#666" }}>
-          <a
-            href="/aviso-legal"
-            style={{ color: "#111", fontWeight: 800, textDecoration: "none" }}
-          >
-            Aviso legal
-          </a>{" "}
-          |{" "}
-          <a
-            href="/politica-privacidad"
-            style={{ color: "#111", fontWeight: 800, textDecoration: "none" }}
-          >
-            Política de privacidad
-          </a>{" "}
-          |{" "}
-          <a
-            href="/politica-cookies"
-            style={{ color: "#111", fontWeight: 800, textDecoration: "none" }}
-          >
-            Política de cookies
-          </a>{" "}
-          |{" "}
-          <a
-            href="#"
-            id="open_preferences_center"
-            style={{ color: "#111", fontWeight: 800, textDecoration: "none" }}
-          >
-            Preferencias de cookies
-          </a>
-        </div>
+            <nav className="nav">
+              <Link href="/plantillas">Plantillas</Link>
+              <Link href="/presupuesto">Presupuesto</Link>
+            </nav>
+          </div>
+        </header>
+
+        {/* Contenido */}
+        <main className="page">{children}</main>
+
+        {/* Footer legal + cookies */}
+        <footer className="footer">
+          <div className="footerInner">
+            <div>© {new Date().getFullYear()} Lucialco Orlas</div>
+
+            <div className="footerLinks">
+              <Link href="/aviso-legal">Aviso legal</Link>
+              <span>·</span>
+              <Link href="/politica-privacidad">Política de privacidad</Link>
+              <span>·</span>
+              <Link href="/politica-cookies">Política de cookies</Link>
+              <span>·</span>
+              <a href="#" id="open_preferences_center">
+                Preferencias de cookies
+              </a>
+            </div>
+          </div>
+        </footer>
       </body>
     </html>
   );
