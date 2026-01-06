@@ -1,308 +1,266 @@
-const WHATSAPP_LINK = "https://wa.me/34606849914"; // Cambia esto luego por el número real de Lucía
+"use client";
+export const dynamic = "force-dynamic";
 
-export default function Page() {
+import { useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+const WHATSAPP_LINK = "https://wa.me/34606849914"; // luego lo cambiamos
+
+export default function PresupuestoPage() {
+  const router = useRouter();
+  const sp = useSearchParams();
+
+  const tipo = sp.get("tipo") || ""; // "plantilla" | "adhoc" | ""
+  const tpl = sp.get("tpl") || "";   // "/plantillas/..."
+  const cat = sp.get("cat") || "";
+
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+
+  const banner = useMemo(() => {
+    if (tipo === "plantilla" && tpl) {
+      const name = decodeURIComponent(tpl.split("/").pop() || "Plantilla");
+      return { mode: "plantilla", title: name };
+    }
+    if (tipo === "adhoc") return { mode: "adhoc", title: "Diseño a medida" };
+    return null;
+  }, [tipo, tpl]);
+
   return (
-    <main style={{ background: "#fff" }}>
-      {/* Top bar */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "16px 20px",
-          borderBottom: "1px solid #eee",
-          position: "sticky",
-          top: 0,
-          background: "white",
-          zIndex: 10,
-        }}
-      >
-        <div style={{ fontWeight: 800, letterSpacing: 0.2 }}>Lucialco · Orlas</div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <a
-            href={WHATSAPP_LINK}
-            target="_blank"
-            rel="noreferrer"
-            style={{
-              textDecoration: "none",
-              border: "1px solid #111",
-              padding: "10px 12px",
-              borderRadius: 10,
-              fontWeight: 700,
-              color: "#111",
-            }}
-          >
-            Habla con Lucía
-          </a>
-          <a
-            href="/presupuesto"
-            style={{
-              textDecoration: "none",
-              background: "#111",
-              color: "white",
-              padding: "10px 12px",
-              borderRadius: 10,
-              fontWeight: 800,
-            }}
-          >
-            Solicitar presupuesto
-          </a>
+    <main style={{ fontFamily: "Arial", padding: 24, maxWidth: 820, margin: "0 auto" }}>
+      <h1 style={{ marginTop: 10 }}>Solicitar presupuesto de orla 🎓</h1>
+      <p style={{ color: "#444", lineHeight: 1.5 }}>
+        Cuéntanos lo básico y te respondemos rápido. Durante todo el proceso puedes hablar con Lucía.
+      </p>
+
+      {/* Banner elección */}
+      {banner && (
+        <div style={bannerBox}>
+          <div style={{ fontWeight: 900 }}>
+            {banner.mode === "plantilla" ? "Has elegido una plantilla" : "Has elegido diseño a medida"}
+          </div>
+
+          {banner.mode === "plantilla" && tpl && (
+            <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={tpl}
+                alt={banner.title}
+                style={{ width: 120, height: 78, objectFit: "cover", borderRadius: 12, border: "1px solid #eee" }}
+              />
+              <div>
+                <div style={{ fontWeight: 900 }}>{banner.title}</div>
+                <div style={{ color: "#666", fontSize: 13 }}>{cat ? `Categoría: ${cat}` : ""}</div>
+                <div style={{ marginTop: 8 }}>
+                  <a href="/plantillas" style={linkBtn}>
+                    Cambiar plantilla
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {banner.mode === "adhoc" && (
+            <div style={{ marginTop: 8, color: "#444" }}>
+              Perfecto. Indícanos en comentarios el estilo o referencias si quieres.
+            </div>
+          )}
         </div>
+      )}
+
+      <div style={{ marginTop: 16, border: "1px solid #eee", borderRadius: 14, padding: 16 }}>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (status === "sending") return;
+
+            setStatus("sending");
+
+            const form = e.currentTarget as HTMLFormElement;
+            const formData = new FormData(form);
+
+            const payload = {
+              centro: String(formData.get("colegio") || ""),
+              contacto_nombre: String(formData.get("contacto") || ""),
+              contacto_email: String(formData.get("email") || ""),
+              contacto_telefono: String(formData.get("telefono") || ""),
+              ciudad: String(formData.get("zona") || ""),
+              alumnos: String(formData.get("alumnos") || ""),
+              profesores: "",
+              fecha_evento: String(formData.get("fechas") || ""),
+              curso: String(formData.get("curso") || ""),
+              comentarios: String(formData.get("comentarios") || ""),
+
+              // 🔥 NUEVO
+              tipo_orla: tipo || "",
+              plantilla_url: tpl || "",
+              categoria_plantilla: cat || "",
+
+              origen: "orlas.lucialco.es",
+            };
+
+            try {
+              const res = await fetch(
+                "https://script.google.com/macros/s/AKfycbwWgSkL_KlwiemvYWGWmO671fjIi9UXAPjobxHwZN-D5rYmnuAs4aMvGG4c3j362BLpgQ/exec",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "text/plain;charset=utf-8" },
+                  body: JSON.stringify(payload),
+                }
+              );
+
+              if (res.ok) {
+                setStatus("sent");
+                form.reset();
+
+                // Volver a home tras 2.5s
+                setTimeout(() => {
+                  router.push("/");
+                }, 2500);
+              } else {
+                setStatus("error");
+              }
+            } catch {
+              setStatus("error");
+            }
+          }}
+          style={{ display: "grid", gap: 12 }}
+        >
+          <div style={{ display: "grid", gap: 6 }}>
+            <label>Centro / Colegio</label>
+            <input name="colegio" required placeholder="Nombre del centro" style={inp} />
+          </div>
+
+          <div style={{ display: "grid", gap: 6 }}>
+            <label>Curso / Grupo</label>
+            <input name="curso" required placeholder="Ej: 6º Primaria / 2º Bach" style={inp} />
+          </div>
+
+          <div style={{ display: "grid", gap: 6 }}>
+            <label>Número aproximado de alumnos</label>
+            <input name="alumnos" required placeholder="Ej: 45" style={inp} />
+          </div>
+
+          <div style={{ display: "grid", gap: 6 }}>
+            <label>Ciudad / Provincia</label>
+            <input name="zona" required placeholder="Ej: Madrid / Toledo" style={inp} />
+          </div>
+
+          <div style={{ display: "grid", gap: 6 }}>
+            <label>Fechas orientativas para las fotos</label>
+            <input name="fechas" required placeholder="Ej: 10–20 marzo" style={inp} />
+          </div>
+
+          <div style={{ display: "grid", gap: 6 }}>
+            <label>Persona de contacto</label>
+            <input name="contacto" required placeholder="Nombre y apellidos" style={inp} />
+          </div>
+
+          <div style={{ display: "grid", gap: 6 }}>
+            <label>Teléfono</label>
+            <input name="telefono" required placeholder="Ej: 6XX XXX XXX" style={inp} />
+          </div>
+
+          <div style={{ display: "grid", gap: 6 }}>
+            <label>Email</label>
+            <input name="email" type="email" required placeholder="tu@email.com" style={inp} />
+          </div>
+
+          <div style={{ display: "grid", gap: 6 }}>
+            <label>Comentarios (opcional)</label>
+            <textarea name="comentarios" placeholder="Detalles, necesidades, etc." rows={4} style={txt} />
+          </div>
+
+          <button type="submit" style={btn} disabled={status === "sending"}>
+            {status === "sending" ? "Enviando..." : "Enviar solicitud"}
+          </button>
+
+          {status === "sent" && (
+            <div style={okBox}>
+              ✅ Formulario enviado. En unos segundos volvemos a la página principal.
+            </div>
+          )}
+
+          {status === "error" && (
+            <div style={errBox}>
+              ❌ No se pudo enviar. Prueba de nuevo o escribe a Lucía por WhatsApp.
+            </div>
+          )}
+        </form>
+
+        <p style={{ marginTop: 10, fontSize: 13, color: "#666", lineHeight: 1.45 }}>
+          Una vez aceptado el presupuesto, se abona una <b>señal del 15%</b> para reservar fecha de fotos.
+        </p>
       </div>
 
-      {/* Hero */}
-      <section style={{ padding: "44px 20px", maxWidth: 980, margin: "0 auto" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 24 }}>
-          <div>
-            <h1 style={{ fontSize: 44, lineHeight: 1.05, margin: 0 }}>
-              Orlas escolares sin complicaciones.
-              <br />
-              <span style={{ background: "#fff3b0" }}>Nos encargamos de todo.</span>
-            </h1>
-
-            <p style={{ fontSize: 18, lineHeight: 1.55, marginTop: 14, color: "#333" }}>
-              Fotos, retoque y diseño <b>con creatividad humana (CR)</b>. Tú eliges la fecha.
-              <br />
-              Lucía se ocupa del resto. Y sí: <b>puedes hablar con ella en todo momento</b>.
-            </p>
-
-            <div style={{ display: "flex", gap: 12, marginTop: 18, flexWrap: "wrap" }}>
-              <a
-                href="/presupuesto"
-                style={{
-                  textDecoration: "none",
-                  background: "#111",
-                  color: "white",
-                  padding: "14px 16px",
-                  borderRadius: 12,
-                  fontWeight: 900,
-                }}
-              >
-                Solicitar presupuesto
-              </a>
-              <a
-                href={WHATSAPP_LINK}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  textDecoration: "none",
-                  border: "1px solid #111",
-                  padding: "14px 16px",
-                  borderRadius: 12,
-                  fontWeight: 800,
-                  color: "#111",
-                }}
-              >
-                Habla con Lucía
-              </a>
-            </div>
-
-            <p style={{ marginTop: 10, color: "#666", fontSize: 13 }}>
-              Respuesta rápida · Proceso claro · Señal del 15% para reservar fecha
-            </p>
-
-            <div style={{ marginTop: 22, display: "grid", gap: 10 }}>
-              {[
-                "Fotografía profesional en el centro",
-                "Retoque natural y diseño cuidado",
-                "Proceso claro, sin sorpresas",
-                "Comunicación directa en todo momento",
-              ].map((t) => (
-                <div
-                  key={t}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "10px 12px",
-                    border: "1px solid #eee",
-                    borderRadius: 12,
-                  }}
-                >
-                  <span aria-hidden style={{ fontWeight: 900 }}>✓</span>
-                  <span style={{ color: "#222" }}>{t}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Side card */}
-          <div
-            style={{
-              border: "1px solid #eee",
-              borderRadius: 16,
-              padding: 18,
-              background: "#fafafa",
-              height: "fit-content",
-            }}
-          >
-            <div style={{ fontWeight: 900, fontSize: 16 }}>Tranquilidad para el colegio</div>
-            <div style={{ marginTop: 12, display: "grid", gap: 10, color: "#222" }}>
-              <div>📅 Fecha de fotos confirmada</div>
-              <div>📩 Emails de seguimiento</div>
-              <div>🔎 Estado del proyecto visible</div>
-              <div>💬 Contacto directo con Lucía</div>
-            </div>
-
-            <div
-              style={{
-                marginTop: 16,
-                padding: 12,
-                borderRadius: 14,
-                background: "white",
-                border: "1px solid #eee",
-              }}
-            >
-              <div style={{ fontWeight: 900 }}>Reserva con señal del 15%</div>
-              <p style={{ margin: "8px 0 0", color: "#444", lineHeight: 1.5 }}>
-                Una vez aceptado el presupuesto y abonada la señal, concretamos la fecha de fotos y
-                bloqueamos el hueco en el calendario.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section style={{ padding: "10px 20px 44px", maxWidth: 980, margin: "0 auto" }}>
-        <h2 style={{ fontSize: 26, margin: "0 0 14px" }}>Cómo funciona</h2>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
-          {[
-            {
-              n: "1",
-              t: "Pide presupuesto",
-              d: "Cuéntanos curso, número de alumnos y fechas orientativas.",
-            },
-            {
-              n: "2",
-              t: "Reservamos fecha (señal 15%)",
-              d: "Con la señal bloqueamos el día de las fotos en el calendario.",
-            },
-            {
-              n: "3",
-              t: "Sesión de fotos + diseño",
-              d: "Lucía realiza las fotos y el equipo diseña la orla con CR.",
-            },
-            {
-              n: "4",
-              t: "Entrega y revisión",
-              d: "Te enseñamos el resultado y cerramos la entrega.",
-            },
-          ].map((s) => (
-            <div
-              key={s.n}
-              style={{
-                border: "1px solid #eee",
-                borderRadius: 16,
-                padding: 14,
-                background: "white",
-              }}
-            >
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 10,
-                  background: "#111",
-                  color: "white",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: 900,
-                  marginBottom: 10,
-                }}
-              >
-                {s.n}
-              </div>
-              <div style={{ fontWeight: 900 }}>{s.t}</div>
-              <div style={{ color: "#444", marginTop: 6, lineHeight: 1.45 }}>{s.d}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Differentiator */}
-        <div
-          style={{
-            marginTop: 18,
-            borderRadius: 16,
-            padding: 16,
-            background: "#fff3b0",
-            border: "1px solid #f1e08a",
-          }}
-        >
-          <div style={{ fontWeight: 900 }}>Aquí no hay automatismos sin alma.</div>
-          <p style={{ margin: "8px 0 0", color: "#333", lineHeight: 1.55 }}>
-            Cada orla se fotografía, retoca y diseña <b>persona a persona</b>. Creatividad humana,
-            atención real y resultados que representan al grupo.
-          </p>
-        </div>
-
-        {/* Final CTA */}
-        <div
-          style={{
-            marginTop: 18,
-            border: "1px solid #eee",
-            borderRadius: 16,
-            padding: 16,
-            background: "#fafafa",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap",
-          }}
-        >
-          <div>
-            <div style={{ fontWeight: 900, fontSize: 18 }}>¿Lista la orla, sin dolores de cabeza?</div>
-            <div style={{ color: "#444", marginTop: 4 }}>
-              Pide presupuesto y te guiamos paso a paso.
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <a
-              href="/presupuesto"
-              style={{
-                textDecoration: "none",
-                background: "#111",
-                color: "white",
-                padding: "12px 14px",
-                borderRadius: 12,
-                fontWeight: 900,
-              }}
-            >
-              Solicitar presupuesto
-            </a>
-            <a
-              href={WHATSAPP_LINK}
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                textDecoration: "none",
-                border: "1px solid #111",
-                padding: "12px 14px",
-                borderRadius: 12,
-                fontWeight: 800,
-                color: "#111",
-              }}
-            >
-              Habla con Lucía
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer style={{ borderTop: "1px solid #eee", padding: "18px 20px", color: "#666" }}>
-        <div style={{ maxWidth: 980, margin: "0 auto", fontSize: 13, display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-          <div>© {new Date().getFullYear()} Lucialco</div>
-          <div>
-            <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer" style={{ color: "#111", fontWeight: 800, textDecoration: "none" }}>
-              Contacto directo con Lucía
-            </a>
-          </div>
-        </div>
-      </footer>
+      <div style={{ marginTop: 14 }}>
+        <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer" style={{ color: "#111", fontWeight: 800, textDecoration: "none" }}>
+          💬 Si prefieres, escribe directamente a Lucía por WhatsApp
+        </a>
+      </div>
     </main>
   );
 }
+
+const inp: React.CSSProperties = {
+  padding: "12px 12px",
+  borderRadius: 10,
+  border: "1px solid #ddd",
+  fontSize: 14,
+};
+
+const txt: React.CSSProperties = {
+  padding: "12px 12px",
+  borderRadius: 10,
+  border: "1px solid #ddd",
+  fontSize: 14,
+  resize: "vertical",
+};
+
+const btn: React.CSSProperties = {
+  background: "#111",
+  color: "white",
+  padding: "12px 14px",
+  borderRadius: 12,
+  border: "none",
+  fontWeight: 900,
+  cursor: "pointer",
+};
+
+const bannerBox: React.CSSProperties = {
+  marginTop: 14,
+  border: "1px solid #eee",
+  borderRadius: 16,
+  padding: 14,
+  background: "#fafafa",
+};
+
+const linkBtn: React.CSSProperties = {
+  display: "inline-block",
+  textDecoration: "none",
+  border: "1px solid #111",
+  borderRadius: 12,
+  padding: "8px 10px",
+  fontWeight: 900,
+  color: "#111",
+};
+
+const okBox: React.CSSProperties = {
+  marginTop: 10,
+  padding: 12,
+  borderRadius: 12,
+  background: "#ecfdf5",
+  border: "1px solid #a7f3d0",
+  color: "#065f46",
+  fontWeight: 800,
+};
+
+const errBox: React.CSSProperties = {
+  marginTop: 10,
+  padding: 12,
+  borderRadius: 12,
+  background: "#fef2f2",
+  border: "1px solid #fecaca",
+  color: "#7f1d1d",
+  fontWeight: 800,
+};
+
