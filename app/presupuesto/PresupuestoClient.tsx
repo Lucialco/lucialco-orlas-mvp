@@ -214,14 +214,15 @@ export default function PresupuestoClient() {
             };
 
             try {
-              const res = await fetch(
-                "fetch("https://script.google.com/macros/s/AKfycbx9QJJzPWpDwStXPMFn_QPrXMjS3n2YgcGa8q39l-jxSvQVmhlsaMTCg8sOWVZtgTn_Tg/exec",
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "text/plain;charset=utf-8" },
-                  body: JSON.stringify(payload),
-                }
-              );
+           const res = await fetch(
+              "https://script.google.com/macros/s/AKfycbx9QJJzPWpDwStXPMFn_QPrXMjS3n2YgcGa8q39l-jxSvQVmhlsaMTCg8sOWVZtgTn_Tg/exec",
+              {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(payload),
+              }
+           );
+
 
               if (res.ok) {
                 setStatus("sent");
