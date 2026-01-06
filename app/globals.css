@@ -1,0 +1,138 @@
+:root{
+  --brand: #0AA6A6;
+  --brand-hover: #078C8C;
+  --brand-soft: #E6F7F7;
+
+  --text: #1F1F1F;
+  --muted: #555;
+  --border: #E6E6E6;
+  --bg: #FFFFFF;
+}
+
+html, body{
+  background: var(--bg);
+  color: var(--text);
+  margin: 0;
+  font-family: Arial, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+a{ color: var(--brand-hover); }
+a:hover{ color: var(--brand); }
+
+.siteHeader{
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+
+.siteHeaderInner{
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.brand{
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.nav{
+  display: flex;
+  gap: 10px;
+  font-weight: 900;
+  flex-wrap: wrap;
+}
+.nav a{
+  color: var(--text);
+  text-decoration: none;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+.nav a:hover{
+  background: var(--brand-soft);
+  color: var(--brand-hover);
+}
+
+.page{
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 18px;
+}
+
+.footer{
+  border-top: 1px solid var(--border);
+  margin-top: 40px;
+  background: #fff;
+}
+
+.footerInner{
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 18px;
+  color: var(--muted);
+  font-size: 13px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.footerLinks{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.footerLinks a{
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 800;
+}
+
+.footerLinks a:hover{
+  color: var(--brand-hover);
+}
+
+.footerLinks span{
+  color: #bbb;
+}
+
+/* Helpers de marca para usar en páginas */
+.card{
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  background: #fff;
+}
+
+.btnPrimary{
+  background: var(--brand);
+  color: #fff;
+  border: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.btnPrimary:hover{ background: var(--brand-hover); }
+
+.badge{
+  display: inline-block;
+  background: var(--brand-soft);
+  color: var(--brand-hover);
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 12px;
+}
