@@ -124,19 +124,7 @@ export default function PresupuestoClient() {
                 <div style={{ fontWeight: 900 }}>{banner.title}</div>
                 <div style={{ color: "var(--muted)", fontSize: 13 }}>{cat ? `Categoría: ${cat}` : ""}</div>
                 <div style={{ marginTop: 8 }}>
-                  <a
-                    href="/plantillas"
-                    style={{
-                      display: "inline-block",
-                      textDecoration: "none",
-                      border: "1px solid var(--border)",
-                      borderRadius: 12,
-                      padding: "8px 10px",
-                      fontWeight: 900,
-                      color: "var(--text)",
-                      background: "#fff",
-                    }}
-                  >
+                  <a href="/plantillas" className="btnOutline">
                     Cambiar plantilla
                   </a>
                 </div>
@@ -288,7 +276,7 @@ export default function PresupuestoClient() {
 
           {/* Estado */}
           <div style={{ display: "grid", gap: 6 }}>
-            <label>¿Qué quieres hacer ahora?</label>
+            <label style={{ fontWeight: 800 }}>¿Qué quieres hacer ahora?</label>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
               <label style={pill(estado === "informativo")}>
                 <input
@@ -348,7 +336,8 @@ export default function PresupuestoClient() {
 
             <div style={row}>
               <span>
-                Orla {tipoOrla === "plantilla" ? "plantilla" : "diseño exclusivo"} ({calc.unitBase} € / niñ@) × {alumnos || 0}
+                Orla {tipoOrla === "plantilla" ? "plantilla" : "diseño exclusivo"} ({calc.unitBase} € / niñ@) ×{" "}
+                {alumnos || 0}
               </span>
               <b>{calc.baseSinIva.toFixed(2)} €</b>
             </div>
@@ -374,22 +363,30 @@ export default function PresupuestoClient() {
             </div>
 
             <div style={{ marginTop: 8, fontSize: 12, color: "var(--muted)", lineHeight: 1.45 }}>
-              Este cálculo es orientativo. El presupuesto que recibirás por email tendrá <b>validez 15 días</b> y quedará marcado como{" "}
-              <b>{estado === "informativo" ? "SOLO INFORMATIVO" : "INTERESADO"}</b>.
+              Este cálculo es orientativo. El presupuesto que recibirás por email tendrá <b>validez 15 días</b> y quedará
+              marcado como <b>{estado === "informativo" ? "SOLO INFORMATIVO" : "INTERESADO"}</b>.
             </div>
           </div>
 
           <Field label="Comentarios (opcional)">
-            <textarea name="comentarios" placeholder="Temática, estilo, referencias, necesidades, etc." rows={4} style={txt} />
+            <textarea
+              name="comentarios"
+              placeholder="Temática, estilo, referencias, necesidades, etc."
+              rows={4}
+              style={txt}
+            />
           </Field>
 
-          <button type="submit" className="btnPrimary" disabled={status === "sending"}>
+          <button
+            type="submit"
+            className="btnPrimary"
+            disabled={status === "sending"}
+            style={{ opacity: status === "sending" ? 0.75 : 1 }}
+          >
             {status === "sending" ? "Enviando..." : "Enviar presupuesto"}
           </button>
 
-          {status === "sent" && (
-            <div style={okBox}>✅ Enviado. Te llegará por email con validez 15 días.</div>
-          )}
+          {status === "sent" && <div style={okBox}>✅ Enviado. Te llegará por email con validez 15 días.</div>}
 
           {status === "error" && (
             <div style={errBox}>❌ No se pudo enviar. Revisa el número de alumnos o escribe a Lucía por WhatsApp.</div>
@@ -397,12 +394,18 @@ export default function PresupuestoClient() {
         </form>
 
         <p style={{ marginTop: 10, fontSize: 13, color: "var(--muted)", lineHeight: 1.45 }}>
-          Nota: el presupuesto se envía por email. Si estás <b>interesado</b>, Lucía podrá ayudarte a cerrar fechas y siguientes pasos.
+          Nota: el presupuesto se envía por email. Si estás <b>interesado</b>, Lucía podrá ayudarte a cerrar fechas y
+          siguientes pasos.
         </p>
       </div>
 
       <div style={{ marginTop: 14 }}>
-        <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer" style={{ color: "var(--brand-hover)", fontWeight: 900, textDecoration: "none" }}>
+        <a
+          href={WHATSAPP_LINK}
+          target="_blank"
+          rel="noreferrer"
+          style={{ color: "var(--brand-hover)", fontWeight: 900, textDecoration: "none" }}
+        >
           💬 Si prefieres, escribe directamente a Lucía por WhatsApp
         </a>
       </div>
