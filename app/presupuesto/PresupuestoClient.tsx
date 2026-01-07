@@ -41,7 +41,7 @@ function normalizePhoneForWhatsApp(input: string) {
   return digits;
 }
 
-// ===== Normalización + validación (simple y build-safe) =====
+// ===== Normalización + validación =====
 function normalizeName(v: string) {
   return String(v || "").trim().replace(/\s+/g, " ");
 }
@@ -54,9 +54,14 @@ function isValidEmail(v: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
 
-function isValidPhone9(v: string) {
+// ✅ Teléfono válido si:
+// - 9 dígitos (ES)
+// - 34 + 9 dígitos (11 en total) si alguien mete prefijo
+function isValidPhoneES(v: string) {
   const digits = String(v || "").replace(/\D/g, "");
-  return digits.length === 9;
+  if (digits.length === 9) return true;
+  if (digits.length === 11 && digits.startsWith("34")) return true;
+  return false;
 }
 
 export default function PresupuestoClient() {
@@ -133,14 +138,19 @@ export default function PresupuestoClient() {
     if (status === "error") setStatus("idle");
   };
 
-  const styleFor = (k: FieldKey): React.CSSProperties => ({
-    ...inp,
-    border: errors[k] ? "1px solid #ef4444" : inp.border,
-    boxShadow: errors[k] ? "0 0 0 3px rgba(239,68,68,0.15)" : "none",
-  });
+  // ✅ Clase de error con !important (para ganar a cualquier CSS global)
+  const errorClass = (k: FieldKey) => (errors[k] ? "inputError" : "");
 
   return (
     <div>
+      {/* CSS global dentro del componente (no toca otros archivos) */}
+      <style jsx global>{`
+        .inputError {
+          border: 1px solid #ef4444 !important;
+          box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+        }
+      `}</style>
+
       <div className="badge">Presupuesto · Validez 15 días · IVA 21%</div>
 
       <h1 style={{ marginTop: 14 }}>Solicitar presupuesto de orla 🎓</h1>
@@ -202,7 +212,7 @@ export default function PresupuestoClient() {
             if (!email) nextErrors.email = "El email es obligatorio.";
             else if (!isValidEmail(email)) nextErrors.email = "Email no válido.";
             if (!telefonoRaw) nextErrors.telefono = "El teléfono es obligatorio.";
-            else if (!isValidPhone9(telefonoRaw)) nextErrors.telefono = "El teléfono debe tener 9 dígitos.";
+            else if (!isValidPhoneES(telefonoRaw)) nextErrors.telefono = "El teléfono debe tener 9 dígitos.";
             if (alumnosN <= 0) nextErrors.alumnos = "Indica el número de alumnos.";
 
             if (Object.keys(nextErrors).length > 0) {
@@ -213,6 +223,7 @@ export default function PresupuestoClient() {
 
             setStatus("sending");
             setFormMsg("");
+            setErrors({});
 
             const telefonoWa = normalizePhoneForWhatsApp(telefonoRaw);
 
@@ -308,7 +319,8 @@ export default function PresupuestoClient() {
               min={1}
               step={1}
               placeholder="Ej: 45"
-              style={styleFor("alumnos")}
+              style={inp}
+              className={errorClass("alumnos")}
               value={alumnosStr}
               onChange={(e) => {
                 setAlumnosStr(e.target.value);
@@ -330,7 +342,8 @@ export default function PresupuestoClient() {
               name="contacto"
               required
               placeholder="Nombre y apellidos"
-              style={styleFor("contacto")}
+              style={inp}
+              className={errorClass("contacto")}
               onChange={() => clearError("contacto")}
             />
           </Field>
@@ -340,7 +353,8 @@ export default function PresupuestoClient() {
               name="telefono"
               required
               placeholder="Ej: 6XX XXX XXX"
-              style={styleFor("telefono")}
+              style={inp}
+              className={errorClass("telefono")}
               onChange={() => clearError("telefono")}
             />
           </Field>
@@ -351,7 +365,8 @@ export default function PresupuestoClient() {
               type="email"
               required
               placeholder="tu@email.com"
-              style={styleFor("email")}
+              style={inp}
+              className={errorClass("email")}
               onChange={() => clearError("email")}
             />
           </Field>
@@ -571,4 +586,5 @@ function pill(active: boolean): React.CSSProperties {
     cursor: "pointer",
   };
 }
+
 
