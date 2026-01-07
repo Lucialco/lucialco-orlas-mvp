@@ -1,8 +1,9 @@
-import Script from "next/script";
+iimport Script from "next/script";
 import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import "./globals.css";
+import HamburgerMenu from "./components/HamburgerMenu";
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -66,7 +67,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
         {/* ===== HEADER DE MARCA ===== */}
         <header className="siteHeader siteHeader--pro">
-          <div className="siteHeaderInner">
+          <div className="siteHeaderInner" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
             <Link href="/" className="brand" aria-label="Lucialco Orlas">
               <Image
                 src="/brand/logo.jpg"
@@ -79,10 +80,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               />
             </Link>
 
-            <nav className="nav nav--pro" aria-label="Navegación principal">
-              <Link href="/plantillas">Plantillas</Link>
-              <Link href="/presupuesto">Presupuesto</Link>
-            </nav>
+            {/* Hamburguesa (menú global) */}
+            <HamburgerMenu />
           </div>
         </header>
 
@@ -111,4 +110,3 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     </html>
   );
 }
-
