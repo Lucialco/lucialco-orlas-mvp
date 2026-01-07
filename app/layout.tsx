@@ -71,10 +71,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <Image
                 src="/brand/logo.jpg"
                 alt="Lucialco Orlas"
-                width={220}
-                height={70}
+                width={520}
+                height={160}
                 priority
-                style={{ height: "46px", width: "auto" }}
+                sizes="(max-width: 640px) 180px, 260px"
+                className="brandLogo"
               />
             </Link>
 
@@ -110,3 +111,4 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     </html>
   );
 }
+
