@@ -42,14 +42,15 @@ a:hover{ color: var(--brand); }
   border-bottom: 1px solid var(--border);
 }
 
+/* ✅ MÁS ALTO (más “marca”) */
 .siteHeaderInner{
   max-width: var(--container);
   margin: 0 auto;
-  padding: 12px 18px;
+  padding: 20px 18px; /* antes 12px 18px */
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 18px;
 }
 
 .brand{
@@ -58,16 +59,23 @@ a:hover{ color: var(--brand); }
   text-decoration: none;
 }
 
+/* ✅ LOGO MÁS PROTAGONISTA */
+.brandLogo{
+  height: 86px;   /* antes 62px */
+  width: auto;
+  display: block;
+}
+
 .nav{
   display: flex;
-  gap: 10px;
+  gap: 12px;
   font-weight: 900;
   flex-wrap: wrap;
 }
 .nav a{
   color: var(--text);
   text-decoration: none;
-  padding: 8px 10px;
+  padding: 10px 12px;  /* un pelín más */
   border-radius: 10px;
 }
 .nav a:hover{
@@ -221,11 +229,15 @@ a:hover{ color: var(--brand); }
   opacity: .6;
   cursor: not-allowed;
 }
-.brandLogo{
-  height: 62px;
-  width: auto;
+
+/* ✅ Mobile */
+@media (max-width: 640px){
+  .siteHeaderInner{
+    padding: 14px 14px;
+  }
+
+  .brandLogo{
+    height: 58px; /* antes 44px */
+  }
 }
 
-@media (max-width: 640px){
-  .brandLogo{
-    height: 44px;
