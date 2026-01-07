@@ -23,18 +23,20 @@ export default function HamburgerMenu() {
         className="menuBtn"
       >
         <span className="burger" aria-hidden="true">
-          <span />
-          <span />
-          <span />
+          <span></span>
+          <span></span>
+          <span></span>
         </span>
       </button>
 
       {open && (
         <div className="menuOverlay" role="dialog" aria-modal="true">
-          <div className="menuBackdrop" onClick={() => setOpen(false)} />
+          <div className="menuBackdrop" onClick={() => setOpen(false)}></div>
+
           <div className="menuPanel">
             <div className="menuTop">
               <div style={{ fontWeight: 900 }}>Menú</div>
+
               <button
                 type="button"
                 className="menuClose"
@@ -49,14 +51,16 @@ export default function HamburgerMenu() {
               <Link href="/plantillas" onClick={() => setOpen(false)} className="menuLink">
                 Plantillas
               </Link>
+
               <Link href="/presupuesto" onClick={() => setOpen(false)} className="menuLink">
                 Presupuestos
               </Link>
+
               <Link href="/lucia" onClick={() => setOpen(false)} className="menuLink">
                 Lucía
               </Link>
 
-              <div className="menuDivider" />
+              <div className="menuDivider"></div>
 
               <a
                 href="https://www.instagram.com/"
@@ -80,11 +84,13 @@ export default function HamburgerMenu() {
           padding: 10px 12px;
           cursor: pointer;
         }
+
         .burger {
           display: inline-grid;
           gap: 4px;
           width: 20px;
         }
+
         .burger span {
           display: block;
           height: 2px;
@@ -97,11 +103,13 @@ export default function HamburgerMenu() {
           inset: 0;
           z-index: 9999;
         }
+
         .menuBackdrop {
           position: absolute;
           inset: 0;
           background: rgba(0, 0, 0, 0.4);
         }
+
         .menuPanel {
           position: absolute;
           right: 0;
@@ -113,11 +121,13 @@ export default function HamburgerMenu() {
           padding: 16px;
           box-shadow: -12px 0 30px rgba(0, 0, 0, 0.12);
         }
+
         .menuTop {
           display: flex;
           align-items: center;
           justify-content: space-between;
         }
+
         .menuClose {
           border: 1px solid var(--border);
           background: white;
@@ -126,6 +136,35 @@ export default function HamburgerMenu() {
           cursor: pointer;
           font-weight: 900;
         }
+
         .menuNav {
           margin-top: 14px;
           display: grid;
+          gap: 10px;
+        }
+
+        .menuDivider {
+          height: 1px;
+          background: var(--border);
+          margin: 6px 0;
+        }
+
+        .menuLink {
+          display: block;
+          padding: 12px 12px;
+          border-radius: 12px;
+          border: 1px solid var(--border);
+          text-decoration: none;
+          color: var(--text);
+          font-weight: 900;
+        }
+
+        .menuLink:hover {
+          background: var(--brand-soft);
+          border-color: var(--brand);
+        }
+      `}</style>
+    </>
+  );
+}
+
