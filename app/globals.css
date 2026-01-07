@@ -221,4 +221,14 @@ a:hover{ color: var(--brand); }
   opacity: .6;
   cursor: not-allowed;
 }
+.brandLogo{
+  height: 62px;
+  width: auto;
+}
+
+@media (max-width: 640px){
+  .brandLogo{
+    height: 44px;
+  }
+}
 
