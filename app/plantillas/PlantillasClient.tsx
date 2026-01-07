@@ -71,7 +71,7 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
         </button>
 
         <div style={{ color: "var(--muted)", fontSize: 13 }}>
-          Consejo: renombra en Drive con <b>01_</b>, <b>02_</b>… para control total.
+          
         </div>
       </div>
 
