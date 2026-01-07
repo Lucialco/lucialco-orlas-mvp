@@ -7,7 +7,7 @@ import "./globals.css";
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es">
-      <head>
+      <body>
         {/* Cookie Consent (TermsFeed) */}
         <Script
           id="termsfeed-cookieconsent-lib"
@@ -63,9 +63,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             })();
           `}
         </Script>
-      </head>
 
-      <body>
         {/* Header de marca */}
         <header className="siteHeader">
           <div className="siteHeaderInner">
@@ -80,7 +78,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               />
             </Link>
 
-            <nav className="nav">
+            <nav className="nav" aria-label="Navegación principal">
               <Link href="/plantillas">Plantillas</Link>
               <Link href="/presupuesto">Presupuesto</Link>
             </nav>
