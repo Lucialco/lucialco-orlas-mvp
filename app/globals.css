@@ -1,12 +1,17 @@
 :root{
+  /* Brand (Lucialco) */
   --brand: #0AA6A6;
   --brand-hover: #078C8C;
   --brand-soft: #E6F7F7;
 
+  /* Base UI */
   --text: #1F1F1F;
   --muted: #555;
   --border: #E6E6E6;
   --bg: #FFFFFF;
+
+  /* Layout */
+  --container: 1100px;
 }
 
 html, body{
@@ -16,8 +21,17 @@ html, body{
   font-family: Arial, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
+*{ box-sizing: border-box; }
+
 a{ color: var(--brand-hover); }
 a:hover{ color: var(--brand); }
+
+/* Focus accesible */
+:focus-visible{
+  outline: 3px solid rgba(10,166,166,.35);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
 
 .siteHeader{
   position: sticky;
@@ -29,7 +43,7 @@ a:hover{ color: var(--brand); }
 }
 
 .siteHeaderInner{
-  max-width: 980px;
+  max-width: var(--container);
   margin: 0 auto;
   padding: 12px 18px;
   display: flex;
@@ -62,7 +76,7 @@ a:hover{ color: var(--brand); }
 }
 
 .page{
-  max-width: 980px;
+  max-width: var(--container);
   margin: 0 auto;
   padding: 18px;
 }
@@ -74,7 +88,7 @@ a:hover{ color: var(--brand); }
 }
 
 .footerInner{
-  max-width: 980px;
+  max-width: var(--container);
   margin: 0 auto;
   padding: 18px;
   color: var(--muted);
@@ -123,8 +137,34 @@ a:hover{ color: var(--brand); }
   border-radius: 12px;
   font-weight: 900;
   cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
 }
 .btnPrimary:hover{ background: var(--brand-hover); }
+
+.btnOutline{
+  border: 1px solid var(--brand);
+  color: var(--brand-hover);
+  background: #fff;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  text-align: center;
+}
+.btnOutline:hover{
+  background: var(--brand-soft);
+}
+
+.btnLink{
+  color: var(--brand-hover);
+  text-decoration: none;
+  font-weight: 900;
+}
+.btnLink:hover{ color: var(--brand); }
 
 .badge{
   display: inline-block;
@@ -135,4 +175,35 @@ a:hover{ color: var(--brand); }
   border-radius: 999px;
   font-weight: 900;
   font-size: 12px;
+}
+
+/* Chips / pills reutilizables */
+.chip{
+  text-decoration: none;
+  border: 1px solid var(--brand);
+  color: var(--brand-hover);
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 13px;
+  display: inline-block;
+}
+.chip:hover{
+  background: var(--brand-soft);
+}
+
+.pill{
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 13px;
+}
+.pillOn{
+  border-color: var(--brand);
+  background: var(--brand);
+  color: #fff;
 }
