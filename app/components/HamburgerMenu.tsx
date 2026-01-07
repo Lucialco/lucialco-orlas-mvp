@@ -29,54 +29,54 @@ export default function HamburgerMenu() {
         </span>
       </button>
 
-      {open && (
-        <div className="hm_overlay" role="dialog" aria-modal="true">
-          <div className="hm_backdrop" onClick={() => setOpen(false)} />
+      {/* Drawer */}
+      <div className={`hm_root ${open ? "isOpen" : ""}`} aria-hidden={!open}>
+        <div className="hm_backdrop" onClick={() => setOpen(false)} />
 
-          <aside className="hm_panel">
-            <div className="hm_top">
-              <div className="hm_title">Menú</div>
-              <button
-                type="button"
-                className="hm_close"
-                aria-label="Cerrar"
-                onClick={() => setOpen(false)}
-              >
-                ✕
-              </button>
-            </div>
+        <aside className="hm_drawer" role="dialog" aria-modal="true" aria-label="Menú">
+          <div className="hm_head">
+            <div className="hm_title">Menú</div>
+            <button type="button" className="hm_close" aria-label="Cerrar" onClick={() => setOpen(false)}>
+              ✕
+            </button>
+          </div>
 
-            <nav className="hm_nav" aria-label="Menú">
-              <Link href="/plantillas" onClick={() => setOpen(false)} className="hm_link">
-                Plantillas
-              </Link>
-              <Link href="/presupuesto" onClick={() => setOpen(false)} className="hm_link">
-                Presupuestos
-              </Link>
-              <Link href="/lucia" onClick={() => setOpen(false)} className="hm_link">
-                Lucía
-              </Link>
+          <nav className="hm_nav">
+            <Link href="/plantillas" onClick={() => setOpen(false)} className="hm_item">
+              Plantillas
+              <span className="hm_chev">›</span>
+            </Link>
 
-              <div className="hm_divider" />
+            <Link href="/presupuesto" onClick={() => setOpen(false)} className="hm_item">
+              Presupuestos
+              <span className="hm_chev">›</span>
+            </Link>
 
-              {/* Cambia el link cuando me des tu @ */}
-              <a
-                href="https://www.instagram.com/"
-                target="_blank"
-                rel="noreferrer"
-                className="hm_link hm_linkMuted"
-                onClick={() => setOpen(false)}
-              >
-                Instagram
-              </a>
-            </nav>
+            <Link href="/lucia" onClick={() => setOpen(false)} className="hm_item">
+              Lucía
+              <span className="hm_chev">›</span>
+            </Link>
 
-            <div className="hm_footer">
-              <div className="hm_note">Lucialco Orlas</div>
-            </div>
-          </aside>
-        </div>
-      )}
+            <div className="hm_sep" />
+
+            {/* Cambia a tu cuenta real cuando me la pases */}
+            <a
+              href="https://www.instagram.com/"
+              target="_blank"
+              rel="noreferrer"
+              className="hm_item hm_muted"
+              onClick={() => setOpen(false)}
+            >
+              Instagram
+              <span className="hm_chev">↗</span>
+            </a>
+          </nav>
+
+          <div className="hm_foot">
+            <div className="hm_brand">Lucialco Orlas</div>
+          </div>
+        </aside>
+      </div>
 
       <style jsx global>{`
         .hm_btn {
@@ -108,10 +108,15 @@ export default function HamburgerMenu() {
           border-radius: 999px;
         }
 
-        .hm_overlay {
+        /* Root overlay (hidden when closed) */
+        .hm_root {
           position: fixed;
           inset: 0;
           z-index: 9999;
+          pointer-events: none;
+        }
+        .hm_root.isOpen {
+          pointer-events: auto;
         }
 
         .hm_backdrop {
@@ -119,50 +124,45 @@ export default function HamburgerMenu() {
           inset: 0;
           background: rgba(0, 0, 0, 0.35);
           backdrop-filter: blur(2px);
+          opacity: 0;
+          transition: opacity 160ms ease;
+        }
+        .hm_root.isOpen .hm_backdrop {
+          opacity: 1;
         }
 
-        .hm_panel {
+        /* Drawer */
+        .hm_drawer {
           position: absolute;
-          right: 14px;
-          top: 14px;
-          height: calc(100% - 28px);
-          width: 320px;
-          max-width: calc(100% - 28px);
+          top: 0;
+          right: 0;
+          height: 100%;
+          width: 360px;
+          max-width: 92vw;
           background: white;
-          border: 1px solid var(--border);
-          border-radius: 18px;
-          padding: 14px;
-          box-shadow: 0 18px 60px rgba(0, 0, 0, 0.18);
-          animation: hm_in 160ms ease-out;
+          border-left: 1px solid var(--border);
+          box-shadow: -18px 0 60px rgba(0, 0, 0, 0.2);
+          transform: translateX(100%);
+          transition: transform 180ms ease;
           display: flex;
           flex-direction: column;
         }
-
-        @keyframes hm_in {
-          from {
-            transform: translateX(10px);
-            opacity: 0.6;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
+        .hm_root.isOpen .hm_drawer {
+          transform: translateX(0);
         }
 
-        .hm_top {
+        .hm_head {
+          padding: 16px 16px 12px;
+          border-bottom: 1px solid var(--border);
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 10px;
-          padding-bottom: 10px;
-          border-bottom: 1px solid var(--border);
         }
-
         .hm_title {
           font-weight: 900;
           font-size: 16px;
         }
-
         .hm_close {
           border: 1px solid var(--border);
           background: white;
@@ -178,47 +178,49 @@ export default function HamburgerMenu() {
         }
 
         .hm_nav {
-          margin-top: 12px;
+          padding: 12px 10px;
           display: grid;
-          gap: 10px;
+          gap: 8px;
         }
 
-        .hm_link {
+        .hm_item {
           display: flex;
           align-items: center;
           justify-content: space-between;
           padding: 12px 12px;
           border-radius: 14px;
-          border: 1px solid var(--border);
           text-decoration: none;
           color: var(--text);
           font-weight: 900;
-          background: white;
+          background: transparent;
         }
-
-        .hm_link:hover {
+        .hm_item:hover {
           background: var(--brand-soft);
-          border-color: var(--brand);
         }
 
-        .hm_linkMuted {
+        .hm_chev {
+          color: var(--muted);
+          font-weight: 900;
+          margin-left: 10px;
+        }
+
+        .hm_sep {
+          height: 1px;
+          background: var(--border);
+          margin: 6px 6px;
+        }
+
+        .hm_muted {
           color: var(--muted);
           font-weight: 800;
         }
 
-        .hm_divider {
-          height: 1px;
-          background: var(--border);
-          margin: 6px 0;
-        }
-
-        .hm_footer {
+        .hm_foot {
           margin-top: auto;
-          padding-top: 10px;
+          padding: 14px 16px;
           border-top: 1px solid var(--border);
         }
-
-        .hm_note {
+        .hm_brand {
           font-size: 12px;
           color: var(--muted);
         }
@@ -226,5 +228,3 @@ export default function HamburgerMenu() {
     </>
   );
 }
-
-
