@@ -1,4 +1,4 @@
-iimport Script from "next/script";
+import Script from "next/script";
 import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
