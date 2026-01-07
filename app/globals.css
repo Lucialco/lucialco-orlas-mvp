@@ -129,6 +129,7 @@ a:hover{ color: var(--brand); }
   background: #fff;
 }
 
+/* BOTONES (válidos para <a> y <button>) */
 .btnPrimary{
   background: var(--brand);
   color: #fff;
@@ -140,6 +141,9 @@ a:hover{ color: var(--brand); }
   text-decoration: none;
   display: inline-block;
   text-align: center;
+  line-height: 1;
+  -webkit-appearance: none;
+  appearance: none;
 }
 .btnPrimary:hover{ background: var(--brand-hover); }
 
@@ -154,6 +158,9 @@ a:hover{ color: var(--brand); }
   text-decoration: none;
   display: inline-block;
   text-align: center;
+  line-height: 1;
+  -webkit-appearance: none;
+  appearance: none;
 }
 .btnOutline:hover{
   background: var(--brand-soft);
@@ -207,3 +214,11 @@ a:hover{ color: var(--brand); }
   background: var(--brand);
   color: #fff;
 }
+
+/* EXTRA: estados disabled bonitos */
+.btnPrimary:disabled,
+.btnOutline:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+}
+
