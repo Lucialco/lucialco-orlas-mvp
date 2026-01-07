@@ -64,8 +64,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           `}
         </Script>
 
-        {/* Header de marca */}
-        <header className="siteHeader">
+        {/* ===== HEADER DE MARCA ===== */}
+        <header className="siteHeader siteHeader--pro">
           <div className="siteHeaderInner">
             <Link href="/" className="brand" aria-label="Lucialco Orlas">
               <Image
@@ -74,12 +74,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 width={520}
                 height={160}
                 priority
-                sizes="(max-width: 640px) 180px, 260px"
+                sizes="(max-width: 640px) 200px, 320px"
                 className="brandLogo"
               />
             </Link>
 
-            <nav className="nav" aria-label="Navegación principal">
+            <nav className="nav nav--pro" aria-label="Navegación principal">
               <Link href="/plantillas">Plantillas</Link>
               <Link href="/presupuesto">Presupuesto</Link>
             </nav>
@@ -89,7 +89,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {/* Contenido */}
         <main className="page">{children}</main>
 
-        {/* Footer legal + cookies */}
+        {/* Footer */}
         <footer className="footer">
           <div className="footerInner">
             <div>© {new Date().getFullYear()} Lucialco Orlas</div>
