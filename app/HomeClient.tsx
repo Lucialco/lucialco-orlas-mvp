@@ -26,39 +26,15 @@ export default function HomeClient() {
             </p>
 
             <div style={{ display: "flex", gap: 12, marginTop: 18, flexWrap: "wrap" }}>
-              <a href="/presupuesto" className="btnPrimary" style={{ textDecoration: "none", display: "inline-block" }}>
+              <a href="/presupuesto" className="btnPrimary">
                 Solicitar presupuesto
               </a>
 
-              <a
-                href="/plantillas"
-                style={{
-                  textDecoration: "none",
-                  border: "1px solid var(--border)",
-                  padding: "12px 14px",
-                  borderRadius: 12,
-                  fontWeight: 900,
-                  color: "var(--text)",
-                  display: "inline-block",
-                }}
-              >
+              <a href="/plantillas" className="btnOutline">
                 Ver plantillas
               </a>
 
-              <a
-                href={WHATSAPP_LINK}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  textDecoration: "none",
-                  border: "1px solid var(--border)",
-                  padding: "12px 14px",
-                  borderRadius: 12,
-                  fontWeight: 900,
-                  color: "var(--text)",
-                  display: "inline-block",
-                }}
-              >
+              <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer" className="btnOutline">
                 Habla con Lucía
               </a>
             </div>
@@ -74,7 +50,11 @@ export default function HomeClient() {
                 "Proceso claro, sin sorpresas",
                 "Comunicación directa en todo momento",
               ].map((t) => (
-                <div key={t} className="card" style={{ padding: "10px 12px", display: "flex", gap: 10, alignItems: "center" }}>
+                <div
+                  key={t}
+                  className="card"
+                  style={{ padding: "10px 12px", display: "flex", gap: 10, alignItems: "center" }}
+                >
                   <span aria-hidden style={{ fontWeight: 900, color: "var(--brand-hover)" }}>
                     ✓
                   </span>
@@ -96,24 +76,11 @@ export default function HomeClient() {
             </div>
 
             <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
-              <a href="/plantillas" className="btnPrimary" style={{ textDecoration: "none", textAlign: "center" }}>
+              <a href="/plantillas" className="btnPrimary">
                 Ver plantillas
               </a>
 
-              <a
-                href="/presupuesto?tipo=adhoc"
-                style={{
-                  textDecoration: "none",
-                  border: "1px solid var(--border)",
-                  background: "#fff",
-                  color: "var(--text)",
-                  padding: "12px 14px",
-                  borderRadius: 12,
-                  fontWeight: 900,
-                  display: "inline-block",
-                  textAlign: "center",
-                }}
-              >
+              <a href="/presupuesto?tipo=adhoc" className="btnOutline">
                 Pedir diseño a medida
               </a>
             </div>
@@ -121,7 +88,8 @@ export default function HomeClient() {
             <div className="card" style={{ marginTop: 16 }}>
               <div style={{ fontWeight: 900 }}>Reserva con señal del 15%</div>
               <p style={{ margin: "8px 0 0", color: "var(--muted)", lineHeight: 1.5 }}>
-                Una vez aceptado el presupuesto y abonada la señal, concretamos la fecha de fotos y bloqueamos el hueco en el calendario.
+                Una vez aceptado el presupuesto y abonada la señal, concretamos la fecha de fotos y bloqueamos el hueco
+                en el calendario.
               </p>
             </div>
           </div>
@@ -167,49 +135,36 @@ export default function HomeClient() {
           <div className="badge">Creatividad humana</div>
           <div style={{ fontWeight: 900, marginTop: 10 }}>Aquí no hay automatismos sin alma.</div>
           <p style={{ margin: "8px 0 0", color: "var(--muted)", lineHeight: 1.55 }}>
-            Cada orla se fotografía, retoca y diseña <b>persona a persona</b>. Atención real y resultados que representan al grupo.
+            Cada orla se fotografía, retoca y diseña <b>persona a persona</b>. Atención real y resultados que representan
+            al grupo.
           </p>
         </div>
 
         {/* Final CTA */}
-        <div className="card" style={{ marginTop: 18, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <div
+          className="card"
+          style={{
+            marginTop: 18,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
           <div>
             <div style={{ fontWeight: 900, fontSize: 18 }}>¿Lista la orla, sin dolores de cabeza?</div>
             <div style={{ color: "var(--muted)", marginTop: 4 }}>Elige plantilla o pide diseño a medida.</div>
           </div>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <a href="/plantillas" className="btnPrimary" style={{ textDecoration: "none" }}>
+            <a href="/plantillas" className="btnPrimary">
               Ver plantillas
             </a>
-            <a
-              href="/presupuesto?tipo=adhoc"
-              style={{
-                textDecoration: "none",
-                border: "1px solid var(--border)",
-                padding: "12px 14px",
-                borderRadius: 12,
-                fontWeight: 900,
-                color: "var(--text)",
-                background: "#fff",
-              }}
-            >
+            <a href="/presupuesto?tipo=adhoc" className="btnOutline">
               Diseño a medida
             </a>
-            <a
-              href={WHATSAPP_LINK}
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                textDecoration: "none",
-                border: "1px solid var(--border)",
-                padding: "12px 14px",
-                borderRadius: 12,
-                fontWeight: 900,
-                color: "var(--text)",
-                background: "#fff",
-              }}
-            >
+            <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer" className="btnOutline">
               Habla con Lucía
             </a>
           </div>
