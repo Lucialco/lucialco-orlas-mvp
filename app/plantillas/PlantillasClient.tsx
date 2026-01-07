@@ -48,23 +48,11 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
       </p>
 
       <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <a href="/presupuesto?tipo=adhoc" className="btnPrimary" style={{ textDecoration: "none", display: "inline-block" }}>
+        <a href="/presupuesto?tipo=adhoc" className="btnPrimary">
           Quiero diseño a medida
         </a>
 
-        <a
-          href="/presupuesto"
-          style={{
-            textDecoration: "none",
-            border: "1px solid var(--border)",
-            color: "var(--text)",
-            background: "#fff",
-            padding: "12px 14px",
-            borderRadius: 12,
-            fontWeight: 900,
-            display: "inline-block",
-          }}
-        >
+        <a href="/presupuesto" className="btnOutline">
           Pedir presupuesto sin elegir ahora
         </a>
       </div>
@@ -72,13 +60,13 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
       <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
         <div style={{ fontWeight: 900 }}>Orden:</div>
 
-        <button onClick={() => setSortMode("prefijo")} style={sortMode === "prefijo" ? pillOn : pill}>
+        <button onClick={() => setSortMode("prefijo")} className={sortMode === "prefijo" ? "pillOn" : "pill"} type="button">
           Prefijo 01_, 02_…
         </button>
-        <button onClick={() => setSortMode("az")} style={sortMode === "az" ? pillOn : pill}>
+        <button onClick={() => setSortMode("az")} className={sortMode === "az" ? "pillOn" : "pill"} type="button">
           A–Z
         </button>
-        <button onClick={() => setSortMode("za")} style={sortMode === "za" ? pillOn : pill}>
+        <button onClick={() => setSortMode("za")} className={sortMode === "za" ? "pillOn" : "pill"} type="button">
           Z–A
         </button>
 
@@ -89,7 +77,7 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
 
       <div style={{ marginTop: 18, display: "flex", gap: 10, flexWrap: "wrap" }}>
         {CATS.map((cat) => (
-          <a key={cat} href={`#${cat}`} style={chip}>
+          <a key={cat} href={`#${cat}`} className="chip">
             {labelCat(cat)}
           </a>
         ))}
@@ -112,7 +100,18 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
             ) : (
               <div style={grid}>
                 {items.map((p) => (
-                  <div key={p.src} style={card}>
+                  <div
+                    key={p.src}
+                    style={card}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
+                      (e.currentTarget as HTMLDivElement).style.boxShadow = "0 10px 22px rgba(0,0,0,0.06)";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLDivElement).style.transform = "translateY(0px)";
+                      (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 0 rgba(0,0,0,0)";
+                    }}
+                  >
                     <button
                       onClick={() => {
                         setOpenSrc(p.src);
@@ -121,14 +120,10 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
                       }}
                       style={imgBtn}
                       aria-label={`Ver ${p.title}`}
+                      type="button"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={p.src}
-                        alt={p.title}
-                        style={img}
-                        loading="lazy"
-                      />
+                      <img src={p.src} alt={p.title} style={img} loading="lazy" />
                     </button>
 
                     <div style={{ marginTop: 10, fontWeight: 900, color: "var(--text)" }}>{p.title}</div>
@@ -137,22 +132,11 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
                       <a
                         href={`/presupuesto?tipo=plantilla&tpl=${encodeURIComponent(p.src)}&cat=${encodeURIComponent(cat)}`}
                         className="btnPrimary"
-                        style={{ textDecoration: "none", display: "inline-block" }}
                       >
                         Elegir esta
                       </a>
 
-                      <a
-                        href={p.src}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          textDecoration: "none",
-                          color: "var(--brand-hover)",
-                          fontWeight: 900,
-                          alignSelf: "center",
-                        }}
-                      >
+                      <a href={p.src} target="_blank" rel="noreferrer" className="btnLink" style={{ alignSelf: "center" }}>
                         Ver en pestaña
                       </a>
                     </div>
@@ -174,7 +158,7 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
                 <div style={{ fontSize: 12, color: "var(--muted)" }}>{labelCat(openCat as any)}</div>
               </div>
 
-              <button onClick={() => setOpenSrc(null)} style={closeBtn} aria-label="Cerrar">
+              <button onClick={() => setOpenSrc(null)} style={closeBtn} aria-label="Cerrar" type="button">
                 ✕
               </button>
             </div>
@@ -188,26 +172,11 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
               <a
                 href={`/presupuesto?tipo=plantilla&tpl=${encodeURIComponent(openSrc)}&cat=${encodeURIComponent(openCat)}`}
                 className="btnPrimary"
-                style={{ textDecoration: "none" }}
               >
                 Elegir esta plantilla
               </a>
 
-              <a
-                href={openSrc}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  textDecoration: "none",
-                  border: "1px solid var(--border)",
-                  color: "var(--text)",
-                  padding: "12px 14px",
-                  borderRadius: 12,
-                  fontWeight: 900,
-                  display: "inline-block",
-                  background: "#fff",
-                }}
-              >
+              <a href={openSrc} target="_blank" rel="noreferrer" className="btnOutline">
                 Abrir en pestaña
               </a>
             </div>
@@ -278,35 +247,6 @@ const img: React.CSSProperties = {
   background: "var(--brand-soft)",
 };
 
-const chip: React.CSSProperties = {
-  textDecoration: "none",
-  border: "1px solid var(--border)",
-  color: "var(--text)",
-  background: "#fff",
-  padding: "8px 10px",
-  borderRadius: 999,
-  fontWeight: 900,
-  fontSize: 13,
-};
-
-const pill: React.CSSProperties = {
-  border: "1px solid var(--border)",
-  background: "white",
-  color: "var(--text)",
-  padding: "8px 10px",
-  borderRadius: 999,
-  cursor: "pointer",
-  fontWeight: 900,
-  fontSize: 13,
-};
-
-const pillOn: React.CSSProperties = {
-  ...pill,
-  background: "var(--brand-soft)",
-  border: "1px solid var(--brand)",
-  color: "var(--brand-hover)",
-};
-
 const overlay: React.CSSProperties = {
   position: "fixed",
   inset: 0,
@@ -334,3 +274,4 @@ const closeBtn: React.CSSProperties = {
   cursor: "pointer",
   fontWeight: 900,
 };
+
