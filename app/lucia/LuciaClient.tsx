@@ -13,9 +13,12 @@ export default function LuciaClient() {
 
       <div className="card" style={{ background: "var(--brand-soft)" }}>
         <p style={{ margin: 0, lineHeight: 1.7 }}>
-          Lucialco nace de algo sencillo: convertir un cierre de etapa en un recuerdo bonito, cuidado y fácil de
-          gestionar para el cole. Me encargo personalmente del diseño y del acompañamiento para que todo salga
-          redondo: tiempos, estilo, fotos y resultado final.
+          Lucialco nace de algo muy sencillo: ayudar a cerrar una etapa importante convirtiéndola en un recuerdo bonito, cuidado y fácil de gestionar para el colegio.
+          Soy Lucía, diseñadora desde hace más de 30 años. Trabajo como siempre he creído que debe hacerse el diseño: con tiempo, sensibilidad y atención al detalle. 
+          No utilizo inteligencia artificial; utilizo creatividad humana, experiencia y un enfoque artesanal, cuidando cada decisión para que el resultado tenga sentido y emoción.
+          Me encargo personalmente de todo el proceso y acompaño al profesorado en cada paso, para que no tenga que preocuparse por nada: planificación de tiempos, estilo, fotos y acabado final. 
+          Mi objetivo es que el proceso sea sencillo para el centro y que el resultado final esté a la altura de lo que representa ese curso que se cierra.
+          Porque detrás de cada orla hay alumnos, familias y mucho trabajo…
         </p>
       </div>
 
