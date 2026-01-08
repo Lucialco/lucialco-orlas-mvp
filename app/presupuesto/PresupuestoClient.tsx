@@ -281,6 +281,20 @@ export default function PresupuestoClient() {
               );
 
               if (res.ok) {
+                // ✅ GA4 / GTM: conversión real (solo si el envío fue OK)
+                try {
+                  (window as any).dataLayer = (window as any).dataLayer || [];
+                  (window as any).dataLayer.push({
+                    event: "submit_presupuesto",
+                    tipo_orla: tipoOrla, // "plantilla" | "exclusiva"
+                    estado_presupuesto: estado, // "informativo" | "interesado"
+                    alumnos: alumnosN,
+                    total_con_iva: calc.totalConIva,
+                    plantilla_url: tpl || "",
+                    categoria_plantilla: cat || "",
+                  });
+                } catch {}
+
                 setStatus("sent");
                 setErrors({});
                 setFormMsg("");
@@ -586,5 +600,3 @@ function pill(active: boolean): React.CSSProperties {
     cursor: "pointer",
   };
 }
-
-
