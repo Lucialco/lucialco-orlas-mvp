@@ -5,10 +5,41 @@ import Link from "next/link";
 import "./globals.css";
 import HamburgerMenu from "./components/HamburgerMenu";
 
+const GTM_ID = "GTM-T9LNC454";
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es">
+      <head>
+        {/* Google Tag Manager */}
+        <Script
+          id="gtm-head"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+              new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+              j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+              'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+              })(window,document,'script','dataLayer','${GTM_ID}');
+            `,
+          }}
+        />
+        {/* End Google Tag Manager */}
+      </head>
+
       <body>
+        {/* Google Tag Manager (noscript) */}
+        <noscript>
+          <iframe
+            src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+          />
+        </noscript>
+        {/* End Google Tag Manager (noscript) */}
+
         {/* Cookie Consent (TermsFeed) */}
         <Script
           id="termsfeed-cookieconsent-lib"
@@ -67,7 +98,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
         {/* ===== HEADER DE MARCA ===== */}
         <header className="siteHeader siteHeader--pro">
-          <div className="siteHeaderInner" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+          <div
+            className="siteHeaderInner"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
             <Link href="/" className="brand" aria-label="Lucialco Orlas">
               <Image
                 src="/brand/logo.jpg"
