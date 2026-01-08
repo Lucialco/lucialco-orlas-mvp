@@ -5,18 +5,29 @@ import { useMemo, useState } from "react";
 type Plantilla = { src: string; title: string };
 type PlantillasData = Record<string, Plantilla[]>;
 
-const CATS = ["Guarderia", "Infantil", "Primaria", "Secundaria", "Bachillerato"] as const;
+// Categorías originales del JSON
+const RAW_CATS = ["Guarderia", "Infantil", "Primaria", "Secundaria", "Bachillerato"] as const;
+
+// Grupos nuevos (los que verá el usuario)
+type GroupKey = "GI" | "PS";
+type Group = { key: GroupKey; label: string; raw: (typeof RAW_CATS)[number][] };
+
+const GROUPS: Group[] = [
+  { key: "GI", label: "Guardería / Infantil", raw: ["Guarderia", "Infantil"] },
+  { key: "PS", label: "Primaria / Secundaria", raw: ["Primaria", "Secundaria", "Bachillerato"] },
+];
 
 export default function PlantillasClient({ data }: { data: PlantillasData }) {
   const [openSrc, setOpenSrc] = useState<string | null>(null);
   const [openTitle, setOpenTitle] = useState<string>("");
-  const [openCat, setOpenCat] = useState<string>("");
+  const [openGroup, setOpenGroup] = useState<GroupKey | null>(null);
 
   const [sortMode, setSortMode] = useState<"prefijo" | "az" | "za">("prefijo");
 
-  const sorted = useMemo(() => {
+  // 1) Ordenamos cada categoría raw (como antes)
+  const sortedRaw = useMemo(() => {
     const out: PlantillasData = {};
-    for (const cat of CATS) {
+    for (const cat of RAW_CATS) {
       const items = [...(data[cat] ?? [])];
 
       items.sort((a, b) => {
@@ -37,6 +48,14 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
     }
     return out;
   }, [data, sortMode]);
+
+  // 2) Construimos los grupos unificados
+  const grouped = useMemo(() => {
+    return GROUPS.map((g) => {
+      const items = g.raw.flatMap((rc) => sortedRaw[rc] ?? []);
+      return { ...g, items };
+    }).filter((g) => g.items.length > 0); // no mostramos grupos vacíos
+  }, [sortedRaw]);
 
   return (
     <div>
@@ -60,7 +79,11 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
       <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
         <div style={{ fontWeight: 900 }}>Orden:</div>
 
-        <button onClick={() => setSortMode("prefijo")} className={sortMode === "prefijo" ? "pillOn" : "pill"} type="button">
+        <button
+          onClick={() => setSortMode("prefijo")}
+          className={sortMode === "prefijo" ? "pillOn" : "pill"}
+          type="button"
+        >
           Prefijo 01_, 02_…
         </button>
         <button onClick={() => setSortMode("az")} className={sortMode === "az" ? "pillOn" : "pill"} type="button">
@@ -69,81 +92,73 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
         <button onClick={() => setSortMode("za")} className={sortMode === "za" ? "pillOn" : "pill"} type="button">
           Z–A
         </button>
-
-        <div style={{ color: "var(--muted)", fontSize: 13 }}>
-          
-        </div>
       </div>
 
+      {/* Chips de navegación (solo 2 grupos) */}
       <div style={{ marginTop: 18, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        {CATS.map((cat) => (
-          <a key={cat} href={`#${cat}`} className="chip">
-            {labelCat(cat)}
+        {grouped.map((g) => (
+          <a key={g.key} href={`#${g.key}`} className="chip">
+            {g.label}
           </a>
         ))}
       </div>
 
-      {CATS.map((cat) => {
-        const items = sorted[cat] ?? [];
+      {/* Secciones por grupo */}
+      {grouped.map((g) => {
+        const items = g.items;
 
         return (
-          <section key={cat} id={cat} style={{ marginTop: 34 }}>
+          <section key={g.key} id={g.key} style={{ marginTop: 34 }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-              <h2 style={{ margin: 0 }}>{labelCat(cat)}</h2>
+              <h2 style={{ margin: 0 }}>{g.label}</h2>
               <div style={{ color: "var(--muted)", fontSize: 13 }}>{items.length} plantilla(s)</div>
             </div>
 
-            {items.length === 0 ? (
-              <div className="card" style={{ marginTop: 12, background: "var(--brand-soft)" }}>
-                Aún no hay plantillas en esta categoría.
-              </div>
-            ) : (
-              <div style={grid}>
-                {items.map((p) => (
-                  <div
-                    key={p.src}
-                    style={card}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
-                      (e.currentTarget as HTMLDivElement).style.boxShadow = "0 10px 22px rgba(0,0,0,0.06)";
+            <div style={grid}>
+              {items.map((p) => (
+                <div
+                  key={p.src}
+                  style={card}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
+                    (e.currentTarget as HTMLDivElement).style.boxShadow = "0 10px 22px rgba(0,0,0,0.06)";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLDivElement).style.transform = "translateY(0px)";
+                    (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 0 rgba(0,0,0,0)";
+                  }}
+                >
+                  <button
+                    onClick={() => {
+                      setOpenSrc(p.src);
+                      setOpenTitle(p.title);
+                      setOpenGroup(g.key);
                     }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLDivElement).style.transform = "translateY(0px)";
-                      (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 0 rgba(0,0,0,0)";
-                    }}
+                    style={imgBtn}
+                    aria-label={`Ver ${p.title}`}
+                    type="button"
                   >
-                    <button
-                      onClick={() => {
-                        setOpenSrc(p.src);
-                        setOpenTitle(p.title);
-                        setOpenCat(cat);
-                      }}
-                      style={imgBtn}
-                      aria-label={`Ver ${p.title}`}
-                      type="button"
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.src} alt={p.title} style={img} loading="lazy" />
+                  </button>
+
+                  <div style={{ marginTop: 10, fontWeight: 900, color: "var(--text)" }}>{p.title}</div>
+
+                  <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <a
+                      href={`/presupuesto?tipo=plantilla&tpl=${encodeURIComponent(p.src)}&cat=${encodeURIComponent(g.label)}`}
+                      className="btnPrimary"
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={p.src} alt={p.title} style={img} loading="lazy" />
-                    </button>
+                      Elegir esta
+                    </a>
 
-                    <div style={{ marginTop: 10, fontWeight: 900, color: "var(--text)" }}>{p.title}</div>
-
-                    <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                      <a
-                        href={`/presupuesto?tipo=plantilla&tpl=${encodeURIComponent(p.src)}&cat=${encodeURIComponent(cat)}`}
-                        className="btnPrimary"
-                      >
-                        Elegir esta
-                      </a>
-
-                      <a href={p.src} target="_blank" rel="noreferrer" className="btnLink" style={{ alignSelf: "center" }}>
-                        Ver en pestaña
-                      </a>
-                    </div>
+                    <a href={p.src} target="_blank" rel="noreferrer" className="btnLink" style={{ alignSelf: "center" }}>
+                      Ver en pestaña
+                    </a>
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              ))}
+            </div>
           </section>
         );
       })}
@@ -155,7 +170,7 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
             <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
               <div>
                 <div style={{ fontWeight: 900 }}>{openTitle}</div>
-                <div style={{ fontSize: 12, color: "var(--muted)" }}>{labelCat(openCat as any)}</div>
+                <div style={{ fontSize: 12, color: "var(--muted)" }}>{groupLabel(openGroup)}</div>
               </div>
 
               <button onClick={() => setOpenSrc(null)} style={closeBtn} aria-label="Cerrar" type="button">
@@ -170,7 +185,7 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
 
             <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
               <a
-                href={`/presupuesto?tipo=plantilla&tpl=${encodeURIComponent(openSrc)}&cat=${encodeURIComponent(openCat)}`}
+                href={`/presupuesto?tipo=plantilla&tpl=${encodeURIComponent(openSrc)}&cat=${encodeURIComponent(groupLabel(openGroup))}`}
                 className="btnPrimary"
               >
                 Elegir esta plantilla
@@ -187,28 +202,17 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
   );
 }
 
+function groupLabel(k: GroupKey | null) {
+  if (k === "GI") return "Guardería / Infantil";
+  if (k === "PS") return "Primaria / Secundaria";
+  return "";
+}
+
 function extractPrefixNumber(src: string) {
   const name = decodeURIComponent(src.split("/").pop() || "");
   const m = name.match(/^(\d{1,3})[_-]/);
   if (!m) return null;
   return parseInt(m[1], 10);
-}
-
-function labelCat(cat: (typeof CATS)[number] | string) {
-  switch (cat) {
-    case "Guarderia":
-      return "Guardería";
-    case "Infantil":
-      return "Infantil";
-    case "Primaria":
-      return "Primaria";
-    case "Secundaria":
-      return "Secundaria";
-    case "Bachillerato":
-      return "Bachillerato";
-    default:
-      return String(cat);
-  }
 }
 
 const grid: React.CSSProperties = {
