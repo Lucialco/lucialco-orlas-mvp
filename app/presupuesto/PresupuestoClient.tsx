@@ -170,7 +170,13 @@ export default function PresupuestoClient() {
               <img
                 src={tpl}
                 alt={banner.title}
-                style={{ width: 120, height: 78, objectFit: "cover", borderRadius: 12, border: "1px solid var(--border)" }}
+                style={{
+                  width: 120,
+                  height: 78,
+                  objectFit: "cover",
+                  borderRadius: 12,
+                  border: "1px solid var(--border)",
+                }}
               />
               <div>
                 <div style={{ fontWeight: 900 }}>{banner.title}</div>
@@ -283,8 +289,9 @@ export default function PresupuestoClient() {
               if (res.ok) {
                 // ✅ GA4 / GTM: conversión real (solo si el envío fue OK)
                 try {
-                  (window as any).dataLayer = (window as any).dataLayer || [];
-                  (window as any).dataLayer.push({
+                  const w = window as any;
+                  w.dataLayer = w.dataLayer || [];
+                  w.dataLayer.push({
                     event: "submit_presupuesto",
                     tipo_orla: tipoOrla, // "plantilla" | "exclusiva"
                     estado_presupuesto: estado, // "informativo" | "interesado"
@@ -499,9 +506,7 @@ export default function PresupuestoClient() {
 
           {status === "sent" && <div style={okBox}>✅ Enviado. Te llegará por email con validez 15 días.</div>}
 
-          {status === "error" && (
-            <div style={errBox}>❌ No se pudo enviar. Revisa los datos o escribe a Lucía por WhatsApp.</div>
-          )}
+          {status === "error" && <div style={errBox}>❌ No se pudo enviar. Revisa los datos o escribe a Lucía por WhatsApp.</div>}
         </form>
 
         <p style={{ marginTop: 10, fontSize: 13, color: "var(--muted)", lineHeight: 1.45 }}>
