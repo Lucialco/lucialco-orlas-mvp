@@ -8,13 +8,13 @@ type PlantillasData = Record<string, Plantilla[]>;
 // Categorías originales del JSON
 const RAW_CATS = ["Guarderia", "Infantil", "Primaria", "Secundaria", "Bachillerato"] as const;
 
-// Grupos nuevos (los que verá el usuario)
+// Grupos visibles
 type GroupKey = "GI" | "PS";
 type Group = { key: GroupKey; label: string; raw: (typeof RAW_CATS)[number][] };
 
 const GROUPS: Group[] = [
   { key: "GI", label: "Guardería / Infantil", raw: ["Guarderia", "Infantil"] },
-  { key: "PS", label: "Primaria / Secundaria", raw: ["Primaria", "Secundaria", "Bachillerato"] },
+  { key: "PS", label: "Primaria / Secundaria", raw: ["Primaria", "Secundaria"] },
 ];
 
 export default function PlantillasClient({
@@ -24,300 +24,145 @@ export default function PlantillasClient({
   data: PlantillasData;
   onlyGroup?: GroupKey;
 }) {
-  const [openSrc, setOpenSrc] = useState<string | null>(null);
-  const [openTitle, setOpenTitle] = useState<string>("");
-  const [openGroup, setOpenGroup] = useState<GroupKey | null>(null);
+  const [sortMode] = useState<"az">("az");
 
-  const [sortMode, setSortMode] = useState<"prefijo" | "az" | "za">("prefijo");
-
-  // 1) Ordenamos cada categoría raw
+  /* ------------------ ORDEN ------------------ */
   const sortedRaw = useMemo(() => {
     const out: PlantillasData = {};
     for (const cat of RAW_CATS) {
       const items = [...(data[cat] ?? [])];
-
-      items.sort((a, b) => {
-        const an = extractPrefixNumber(a.src);
-        const bn = extractPrefixNumber(b.src);
-
-        if (sortMode === "prefijo") {
-          if (an != null && bn != null) return an - bn;
-          if (an != null && bn == null) return -1;
-          if (an == null && bn != null) return 1;
-          return a.title.localeCompare(b.title, "es");
-        }
-        if (sortMode === "az") return a.title.localeCompare(b.title, "es");
-        return b.title.localeCompare(a.title, "es");
-      });
-
+      items.sort((a, b) => a.title.localeCompare(b.title, "es"));
       out[cat] = items;
     }
     return out;
-  }, [data, sortMode]);
+  }, [data]);
 
-  // 2) Construimos los grupos unificados (y opcionalmente filtramos a 1 grupo)
+  /* ------------------ AGRUPACIÓN ------------------ */
   const grouped = useMemo(() => {
-    const base = GROUPS.map((g) => {
-      const items = g.raw.flatMap((rc) => sortedRaw[rc] ?? []);
-      return { ...g, items };
-    }).filter((g) => g.items.length > 0);
+    const base = GROUPS.map((g) => ({
+      ...g,
+      items: g.raw.flatMap((rc) => sortedRaw[rc] ?? []),
+    })).filter((g) => g.items.length > 0);
 
     if (!onlyGroup) return base;
     return base.filter((g) => g.key === onlyGroup);
   }, [sortedRaw, onlyGroup]);
 
+  /* ------------------ TEXTOS SEO ------------------ */
+  const seoTopText =
+    onlyGroup === "GI" ? (
+      <>
+        <p>
+          En <strong>guardería e infantil</strong>, la orla es mucho más que una foto de grupo: es un recuerdo emocional
+          para las familias y una forma bonita de cerrar el curso.
+        </p>
+        <p>
+          En Lucialco trabajo con <strong>plantillas de orlas infantiles</strong> pensadas específicamente para centros
+          educativos, con estilos alegres, colores suaves y una composición clara que funciona bien tanto en impresión
+          como en formato digital.
+        </p>
+        <p>
+          Aquí no hay automatismos ni diseños genéricos: hay <strong>CH — Creatividad Humana</strong>. Cada orla se
+          revisa, se ajusta y se cuida para que el resultado tenga sentido y coherencia con el centro.
+        </p>
+      </>
+    ) : onlyGroup === "PS" ? (
+      <>
+        <p>
+          En <strong>primaria y secundaria</strong>, la orla debe transmitir equilibrio: un diseño actual y atractivo,
+          pero con orden, claridad y criterio.
+        </p>
+        <p>
+          Las <strong>plantillas de orlas para primaria e institutos</strong> de Lucialco están pensadas para
+          <strong> centros públicos, concertados y privados</strong>, cuidando la composición, la tipografía y el tono
+          visual para que el resultado sea profesional y atemporal.
+        </p>
+        <p>
+          Hoy casi todo se puede generar con IA. Aquí la diferencia está en la <strong>Creatividad Humana</strong>:
+          criterio, experiencia y sensibilidad para que la orla represente bien al centro y al grupo.
+        </p>
+      </>
+    ) : null;
+
+  const seoBottomText =
+    onlyGroup === "GI" ? (
+      <>
+        <p>
+          Estas plantillas están pensadas para <strong>escuelas infantiles y colegios</strong>, adaptándose al estilo de
+          cada centro y al número de alumnos por aula.
+        </p>
+        <p>
+          Si ninguna plantilla encaja del todo, siempre puedes optar por un <strong>diseño a medida</strong>, manteniendo
+          la misma filosofía: cercanía, detalle y un resultado cuidado.
+        </p>
+      </>
+    ) : onlyGroup === "PS" ? (
+      <>
+        <p>
+          Estas plantillas funcionan especialmente bien en <strong>colegios de primaria e institutos</strong>, tanto
+          públicos como concertados o privados, donde es importante mantener una imagen coherente y profesional.
+        </p>
+        <p>
+          Puedes partir de una plantilla existente o solicitar un <strong>diseño personalizado</strong>, trabajado con
+          tiempo, criterio y creatividad humana, sin soluciones automáticas.
+        </p>
+      </>
+    ) : null;
+
+  /* ------------------ RENDER ------------------ */
   return (
     <div>
-      <div className="badge">Plantillas · Elige una base o pide diseño exclusivo</div>
-
-      <h1 style={{ margin: "14px 0 0" }}>
+      <h1>
         {onlyGroup === "GI"
           ? "Plantillas de orlas infantiles"
           : onlyGroup === "PS"
-            ? "Plantillas de orlas para primaria y secundaria"
-            : "Plantillas de orlas"}
+          ? "Plantillas de orlas para primaria y secundaria"
+          : "Plantillas de orlas"}
       </h1>
 
-      <p style={{ color: "var(--muted)", lineHeight: 1.5, marginTop: 8 }}>
-        Elige una plantilla como base o pide diseño a medida.
-      </p>
+      {/* TEXTO SEO SUPERIOR */}
+      {seoTopText && <div style={{ marginTop: 14, lineHeight: 1.6 }}>{seoTopText}</div>}
 
-      <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <a href="/presupuesto?tipo=adhoc" className="btnPrimary">
-          Quiero diseño a medida
-        </a>
+      {/* GRID */}
+      {grouped.map((g) => (
+        <section key={g.key} style={{ marginTop: 32 }}>
+          <h2>{g.label}</h2>
 
-        <a href="/presupuesto" className="btnOutline">
-          Pedir presupuesto sin elegir ahora
-        </a>
-      </div>
-
-      <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-        <div style={{ fontWeight: 900 }}>Orden:</div>
-
-        <button
-          onClick={() => setSortMode("prefijo")}
-          className={sortMode === "prefijo" ? "pillOn" : "pill"}
-          type="button"
-        >
-          Prefijo 01_, 02_…
-        </button>
-        <button onClick={() => setSortMode("az")} className={sortMode === "az" ? "pillOn" : "pill"} type="button">
-          A–Z
-        </button>
-        <button onClick={() => setSortMode("za")} className={sortMode === "za" ? "pillOn" : "pill"} type="button">
-          Z–A
-        </button>
-      </div>
-
-      {/* Chips de navegación */}
-      <div style={{ marginTop: 18, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        {onlyGroup ? (
-          <>
-            <a href="/plantillas" className="chip">
-              Ver todas
-            </a>
-            <a
-              href={onlyGroup === "GI" ? "/plantillas-primaria-secundaria" : "/plantillas-infantil"}
-              className="chip"
-            >
-              {onlyGroup === "GI" ? "Ir a Primaria / Secundaria" : "Ir a Guardería / Infantil"}
-            </a>
-          </>
-        ) : (
-          <>
-            <a href="/plantillas-infantil" className="chip">
-              Guardería / Infantil
-            </a>
-            <a href="/plantillas-primaria-secundaria" className="chip">
-              Primaria / Secundaria
-            </a>
-          </>
-        )}
-      </div>
-
-      {/* Secciones por grupo */}
-      {grouped.map((g) => {
-        const items = g.items;
-
-        return (
-          <section key={g.key} id={g.key} style={{ marginTop: 34 }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "baseline",
-                justifyContent: "space-between",
-                gap: 12,
-                flexWrap: "wrap",
-              }}
-            >
-              <h2 style={{ margin: 0 }}>{g.label}</h2>
-              <div style={{ color: "var(--muted)", fontSize: 13 }}>{items.length} plantilla(s)</div>
-            </div>
-
-            <div style={grid}>
-              {items.map((p) => (
-                <div
-                  key={p.src}
-                  style={card}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
-                    (e.currentTarget as HTMLDivElement).style.boxShadow = "0 10px 22px rgba(0,0,0,0.06)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.transform = "translateY(0px)";
-                    (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 0 rgba(0,0,0,0)";
-                  }}
-                >
-                  <button
-                    onClick={() => {
-                      setOpenSrc(p.src);
-                      setOpenTitle(p.title);
-                      setOpenGroup(g.key);
-                    }}
-                    style={imgBtn}
-                    aria-label={`Ver ${p.title}`}
-                    type="button"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p.src} alt={p.title} style={img} loading="lazy" />
-                  </button>
-
-                  <div style={{ marginTop: 10, fontWeight: 900, color: "var(--text)" }}>{p.title}</div>
-
-                  <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    <a
-                      href={`/presupuesto?tipo=plantilla&tpl=${encodeURIComponent(p.src)}&cat=${encodeURIComponent(g.label)}`}
-                      className="btnPrimary"
-                    >
-                      Elegir esta
-                    </a>
-
-                    <a href={p.src} target="_blank" rel="noreferrer" className="btnLink" style={{ alignSelf: "center" }}>
-                      Ver en pestaña
-                    </a>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        );
-      })}
-
-      {/* LIGHTBOX */}
-      {openSrc && (
-        <div onClick={() => setOpenSrc(null)} style={overlay} role="dialog" aria-modal="true">
-          <div onClick={(e) => e.stopPropagation()} style={modal}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-              <div>
-                <div style={{ fontWeight: 900 }}>{openTitle}</div>
-                <div style={{ fontSize: 12, color: "var(--muted)" }}>{groupLabel(openGroup)}</div>
+          <div style={grid}>
+            {g.items.map((p) => (
+              <div key={p.src} style={card}>
+                <img src={p.src} alt={p.title} style={img} />
+                <div style={{ fontWeight: 700, marginTop: 8 }}>{p.title}</div>
               </div>
-
-              <button onClick={() => setOpenSrc(null)} style={closeBtn} aria-label="Cerrar" type="button">
-                ✕
-              </button>
-            </div>
-
-            <div style={{ marginTop: 12, borderRadius: 14, overflow: "hidden", border: "1px solid var(--border)" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={openSrc} alt={openTitle} style={{ width: "100%", height: "auto", display: "block" }} />
-            </div>
-
-            <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <a
-                href={`/presupuesto?tipo=plantilla&tpl=${encodeURIComponent(openSrc)}&cat=${encodeURIComponent(
-                  groupLabel(openGroup)
-                )}`}
-                className="btnPrimary"
-              >
-                Elegir esta plantilla
-              </a>
-
-              <a href={openSrc} target="_blank" rel="noreferrer" className="btnOutline">
-                Abrir en pestaña
-              </a>
-            </div>
+            ))}
           </div>
-        </div>
-      )}
+        </section>
+      ))}
+
+      {/* TEXTO SEO INFERIOR */}
+      {seoBottomText && <div style={{ marginTop: 32, lineHeight: 1.6 }}>{seoBottomText}</div>}
     </div>
   );
 }
 
-function groupLabel(k: GroupKey | null) {
-  if (k === "GI") return "Guardería / Infantil";
-  if (k === "PS") return "Primaria / Secundaria";
-  return "";
-}
-
-function extractPrefixNumber(src: string) {
-  const name = decodeURIComponent(src.split("/").pop() || "");
-  const m = name.match(/^(\d{1,3})[_-]/);
-  if (!m) return null;
-  return parseInt(m[1], 10);
-}
-
+/* ------------------ ESTILOS ------------------ */
 const grid: React.CSSProperties = {
-  marginTop: 14,
+  marginTop: 16,
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))",
+  gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
   gap: 14,
 };
 
 const card: React.CSSProperties = {
-  border: "1px solid var(--border)",
-  borderRadius: 16,
-  padding: 14,
+  border: "1px solid #e6e6e6",
+  borderRadius: 14,
+  padding: 12,
   background: "white",
-  transition: "transform 120ms ease, box-shadow 120ms ease",
-  boxShadow: "0 0 0 rgba(0,0,0,0)",
-};
-
-const imgBtn: React.CSSProperties = {
-  padding: 0,
-  margin: 0,
-  border: "none",
-  background: "transparent",
-  cursor: "pointer",
-  width: "100%",
-  textAlign: "left",
 };
 
 const img: React.CSSProperties = {
   width: "100%",
-  height: 170,
+  height: 160,
   objectFit: "cover",
-  display: "block",
-  borderRadius: 12,
-  border: "1px solid var(--border)",
-  background: "var(--brand-soft)",
-};
-
-const overlay: React.CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  background: "rgba(0,0,0,0.55)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 16,
-  zIndex: 1000,
-};
-
-const modal: React.CSSProperties = {
-  width: "min(980px, 100%)",
-  background: "white",
-  borderRadius: 18,
-  padding: 14,
-  border: "1px solid var(--border)",
-};
-
-const closeBtn: React.CSSProperties = {
-  border: "1px solid var(--border)",
-  background: "white",
-  borderRadius: 12,
-  padding: "8px 10px",
-  cursor: "pointer",
-  fontWeight: 900,
+  borderRadius: 10,
 };
