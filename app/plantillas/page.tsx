@@ -1,6 +1,7 @@
 import PlantillasClient from "./PlantillasClient";
 
 const SITE_URL = "https://orlas.lucialco.es";
+const MAX_ITEMS = 80;
 
 export const metadata = {
   title: "Plantillas de Orlas Escolares | Guardería, Infantil, Primaria y Secundaria",
@@ -16,8 +17,25 @@ async function getPlantillas(): Promise<PlantillasData> {
   return (mod.default ?? mod) as PlantillasData;
 }
 
-function jsonLd() {
+function toAbsUrl(src: string) {
+  if (!src) return src;
+  if (src.startsWith("http://") || src.startsWith("https://")) return src;
+  if (src.startsWith("/")) return `${SITE_URL}${src}`;
+  return `${SITE_URL}/${src}`;
+}
+
+function flattenAll(data: PlantillasData) {
+  const out: Plantilla[] = [];
+  for (const key of Object.keys(data)) {
+    const items = data[key] ?? [];
+    out.push(...items);
+  }
+  return out;
+}
+
+function jsonLd(data: PlantillasData) {
   const pageUrl = `${SITE_URL}/plantillas`;
+  const all = flattenAll(data).slice(0, MAX_ITEMS);
 
   const collectionPage = {
     "@context": "https://schema.org",
@@ -61,16 +79,37 @@ function jsonLd() {
     ],
   };
 
-  return [collectionPage, service, offerCatalog];
+  // ItemList: listado de items representativos del catálogo
+  const itemList = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "@id": `${pageUrl}/#items`,
+    name: "Listado de plantillas de orlas",
+    url: pageUrl,
+    numberOfItems: all.length,
+    itemListOrder: "https://schema.org/ItemListUnordered",
+    itemListElement: all.map((p, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      item: {
+        "@type": "CreativeWork",
+        name: p.title,
+        image: toAbsUrl(p.src),
+      },
+    })),
+  };
+
+  return [collectionPage, service, offerCatalog, itemList];
 }
 
 export default async function PlantillasPage() {
   const data = await getPlantillas();
+
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd()) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd(data)) }}
       />
       <PlantillasClient data={data} />
     </>
