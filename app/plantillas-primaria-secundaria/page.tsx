@@ -1,11 +1,12 @@
 import PlantillasClient from "../plantillas/PlantillasClient";
 
 const SITE_URL = "https://orlas.lucialco.es";
+const MAX_ITEMS = 80;
 
 export const metadata = {
   title: "Plantillas de Orlas para Primaria y Secundaria | Estilo Actual | Lucialco",
   description:
-    "Plantillas de orlas para primaria y secundaria con un diseño moderno y limpio. Revisiones incluidas y entrega final lista para imprimir. Solicita presupuesto.",
+    "Plantillas de orlas para primaria y secundaria con un diseño moderno y limpio. Revisiones incluidas y entrega lista para imprimir. Solicita presupuesto.",
 };
 
 type Plantilla = { src: string; title: string };
@@ -16,8 +17,20 @@ async function getPlantillas(): Promise<PlantillasData> {
   return (mod.default ?? mod) as PlantillasData;
 }
 
-function jsonLd() {
+function toAbsUrl(src: string) {
+  if (!src) return src;
+  if (src.startsWith("http://") || src.startsWith("https://")) return src;
+  if (src.startsWith("/")) return `${SITE_URL}${src}`;
+  return `${SITE_URL}/${src}`;
+}
+
+function jsonLd(data: PlantillasData) {
   const pageUrl = `${SITE_URL}/plantillas-primaria-secundaria`;
+  const ps = [
+    ...(data["Primaria"] ?? []),
+    ...(data["Secundaria"] ?? []),
+    ...(data["Bachillerato"] ?? []),
+  ].slice(0, MAX_ITEMS);
 
   const collectionPage = {
     "@context": "https://schema.org",
@@ -40,24 +53,36 @@ function jsonLd() {
     url: pageUrl,
   };
 
-  const offerCatalog = {
+  const itemList = {
     "@context": "https://schema.org",
-    "@type": "OfferCatalog",
-    "@id": `${pageUrl}/#catalog`,
-    name: "Plantillas primaria / secundaria",
+    "@type": "ItemList",
+    "@id": `${pageUrl}/#items`,
+    name: "Listado de plantillas (primaria / secundaria)",
     url: pageUrl,
+    numberOfItems: ps.length,
+    itemListOrder: "https://schema.org/ItemListUnordered",
+    itemListElement: ps.map((p, idx) => ({
+      "@type": "ListItem",
+      position: idx + 1,
+      item: {
+        "@type": "CreativeWork",
+        name: p.title,
+        image: toAbsUrl(p.src),
+      },
+    })),
   };
 
-  return [collectionPage, service, offerCatalog];
+  return [collectionPage, service, itemList];
 }
 
 export default async function Page() {
   const data = await getPlantillas();
+
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd()) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd(data)) }}
       />
       <PlantillasClient data={data} onlyGroup="PS" />
     </>
