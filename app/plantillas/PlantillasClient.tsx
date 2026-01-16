@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 
 type Plantilla = { src: string; title: string };
 type PlantillasData = Record<string, Plantilla[]>;
@@ -17,14 +17,20 @@ const GROUPS: Group[] = [
   { key: "PS", label: "Primaria / Secundaria", raw: ["Primaria", "Secundaria", "Bachillerato"] },
 ];
 
-export default function PlantillasClient({ data }: { data: PlantillasData }) {
+export default function PlantillasClient({
+  data,
+  onlyGroup,
+}: {
+  data: PlantillasData;
+  onlyGroup?: GroupKey;
+}) {
   const [openSrc, setOpenSrc] = useState<string | null>(null);
   const [openTitle, setOpenTitle] = useState<string>("");
   const [openGroup, setOpenGroup] = useState<GroupKey | null>(null);
 
   const [sortMode, setSortMode] = useState<"prefijo" | "az" | "za">("prefijo");
 
-  // 1) Ordenamos cada categoría raw (como antes)
+  // 1) Ordenamos cada categoría raw
   const sortedRaw = useMemo(() => {
     const out: PlantillasData = {};
     for (const cat of RAW_CATS) {
@@ -49,19 +55,29 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
     return out;
   }, [data, sortMode]);
 
-  // 2) Construimos los grupos unificados
+  // 2) Construimos los grupos unificados (y opcionalmente filtramos a 1 grupo)
   const grouped = useMemo(() => {
-    return GROUPS.map((g) => {
+    const base = GROUPS.map((g) => {
       const items = g.raw.flatMap((rc) => sortedRaw[rc] ?? []);
       return { ...g, items };
-    }).filter((g) => g.items.length > 0); // no mostramos grupos vacíos
-  }, [sortedRaw]);
+    }).filter((g) => g.items.length > 0);
+
+    if (!onlyGroup) return base;
+    return base.filter((g) => g.key === onlyGroup);
+  }, [sortedRaw, onlyGroup]);
 
   return (
     <div>
       <div className="badge">Plantillas · Elige una base o pide diseño exclusivo</div>
 
-      <h1 style={{ margin: "14px 0 0" }}>Plantillas de orlas</h1>
+      <h1 style={{ margin: "14px 0 0" }}>
+        {onlyGroup === "GI"
+          ? "Plantillas de orlas infantiles"
+          : onlyGroup === "PS"
+            ? "Plantillas de orlas para primaria y secundaria"
+            : "Plantillas de orlas"}
+      </h1>
+
       <p style={{ color: "var(--muted)", lineHeight: 1.5, marginTop: 8 }}>
         Elige una plantilla como base o pide diseño a medida.
       </p>
@@ -94,13 +110,30 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
         </button>
       </div>
 
-      {/* Chips de navegación (solo 2 grupos) */}
+      {/* Chips de navegación */}
       <div style={{ marginTop: 18, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        {grouped.map((g) => (
-          <a key={g.key} href={`#${g.key}`} className="chip">
-            {g.label}
-          </a>
-        ))}
+        {onlyGroup ? (
+          <>
+            <a href="/plantillas" className="chip">
+              Ver todas
+            </a>
+            <a
+              href={onlyGroup === "GI" ? "/plantillas-primaria-secundaria" : "/plantillas-infantil"}
+              className="chip"
+            >
+              {onlyGroup === "GI" ? "Ir a Primaria / Secundaria" : "Ir a Guardería / Infantil"}
+            </a>
+          </>
+        ) : (
+          <>
+            <a href="/plantillas-infantil" className="chip">
+              Guardería / Infantil
+            </a>
+            <a href="/plantillas-primaria-secundaria" className="chip">
+              Primaria / Secundaria
+            </a>
+          </>
+        )}
       </div>
 
       {/* Secciones por grupo */}
@@ -109,7 +142,15 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
 
         return (
           <section key={g.key} id={g.key} style={{ marginTop: 34 }}>
-            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                justifyContent: "space-between",
+                gap: 12,
+                flexWrap: "wrap",
+              }}
+            >
               <h2 style={{ margin: 0 }}>{g.label}</h2>
               <div style={{ color: "var(--muted)", fontSize: 13 }}>{items.length} plantilla(s)</div>
             </div>
@@ -185,7 +226,9 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
 
             <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
               <a
-                href={`/presupuesto?tipo=plantilla&tpl=${encodeURIComponent(openSrc)}&cat=${encodeURIComponent(groupLabel(openGroup))}`}
+                href={`/presupuesto?tipo=plantilla&tpl=${encodeURIComponent(openSrc)}&cat=${encodeURIComponent(
+                  groupLabel(openGroup)
+                )}`}
                 className="btnPrimary"
               >
                 Elegir esta plantilla
@@ -278,4 +321,3 @@ const closeBtn: React.CSSProperties = {
   cursor: "pointer",
   fontWeight: 900,
 };
-
