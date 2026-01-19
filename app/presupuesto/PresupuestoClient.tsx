@@ -45,18 +45,15 @@ function normalizePhoneForWhatsApp(input: string) {
 function normalizeName(v: string) {
   return String(v || "").trim().replace(/\s+/g, " ");
 }
-
 function normalizeEmail(v: string) {
   return String(v || "").trim().toLowerCase();
 }
-
 function isValidEmail(v: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
-
 // ✅ Teléfono válido si:
 // - 9 dígitos (ES)
-// - 34 + 9 dígitos (11 en total) si alguien mete prefijo
+// - 34 + 9 dígitos (11 en total)
 function isValidPhoneES(v: string) {
   const digits = String(v || "").replace(/\D/g, "");
   if (digits.length === 9) return true;
@@ -68,16 +65,37 @@ export default function PresupuestoClient() {
   const router = useRouter();
   const sp = useSearchParams();
 
+  // --- QS (compat) ---
   const tipoQS = sp.get("tipo") || ""; // "plantilla" | "adhoc"
-  const tpl = sp.get("tpl") || "";
-  const cat = sp.get("cat") || "";
+  // antiguo:
+  const tplOld = sp.get("tpl") || "";
+  const catOld = sp.get("cat") || "";
+  // nuevo:
+  const tplNew = sp.get("plantilla_url") || "";
+  const catNew = sp.get("categoria_plantilla") || "";
+
+  const tpl = tplOld || tplNew; // unifica
+  const cat = catOld || catNew;
+
+  // ¿Viene desde plantilla?
+  const hasTpl = !!tpl;
+
+  // Si no viene tipo ni plantilla: no asumimos nada, pedimos elección
+  const needsChoice = useMemo(() => {
+    const hasTipo = tipoQS === "plantilla" || tipoQS === "adhoc";
+    return !hasTipo && !hasTpl;
+  }, [tipoQS, hasTpl]);
+
+  // Estado de elección cuando no viene definido
+  const [tipoChoice, setTipoChoice] = useState<TipoOrla>("plantilla");
 
   const tipoOrla: TipoOrla = useMemo(() => {
     if (tipoQS === "plantilla") return "plantilla";
     if (tipoQS === "adhoc") return "exclusiva";
-    if (tpl) return "plantilla";
-    return "exclusiva";
-  }, [tipoQS, tpl]);
+    if (hasTpl) return "plantilla";
+    // si no hay nada, usamos la elección del usuario
+    return tipoChoice;
+  }, [tipoQS, hasTpl, tipoChoice]);
 
   const [status, setStatus] = useState<Status>("idle");
   const [estado, setEstado] = useState<EstadoPresupuesto>("informativo");
@@ -138,12 +156,10 @@ export default function PresupuestoClient() {
     if (status === "error") setStatus("idle");
   };
 
-  // ✅ Clase de error con !important (para ganar a cualquier CSS global)
   const errorClass = (k: FieldKey) => (errors[k] ? "inputError" : "");
 
   return (
     <div>
-      {/* CSS global dentro del componente (no toca otros archivos) */}
       <style jsx global>{`
         .inputError {
           border: 1px solid #ef4444 !important;
@@ -158,6 +174,41 @@ export default function PresupuestoClient() {
         Elige el tipo de orla, añade extras si quieres y te enviamos el presupuesto por email (validez 15 días).
       </p>
 
+      {/* ✅ Paso UX: si entran sin elegir plantilla ni tipo */}
+      {needsChoice && (
+        <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
+          <div style={{ fontWeight: 900 }}>Antes de calcular el precio…</div>
+          <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.5 }}>
+            ¿Quieres partir de una <b>plantilla</b> (más económica) o prefieres un <b>diseño exclusivo</b>?
+          </div>
+
+          <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              className={tipoChoice === "plantilla" ? "btnPrimary" : "btnOutline"}
+              onClick={() => setTipoChoice("plantilla")}
+            >
+              Orla desde plantilla
+            </button>
+
+            <button
+              type="button"
+              className={tipoChoice === "exclusiva" ? "btnPrimary" : "btnOutline"}
+              onClick={() => setTipoChoice("exclusiva")}
+            >
+              Orla con diseño exclusivo
+            </button>
+          </div>
+
+          <div style={{ marginTop: 10 }}>
+            <a href="/plantillas" className="btnOutline">
+              Ver y elegir una plantilla
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* Banner de selección */}
       {banner && (
         <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
           <div style={{ fontWeight: 900 }}>
@@ -197,6 +248,16 @@ export default function PresupuestoClient() {
           )}
         </div>
       )}
+
+      {/* ✅ Texto “nos ocupamos de todo” (lo que pediste) */}
+      <div className="card" style={{ marginTop: 16 }}>
+        <div style={{ fontWeight: 900 }}>Nos ocupamos de todo</div>
+        <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
+          Diseño de la orla (si es exclusiva), maquetación, fotografías <i>in situ</i>, retoque fotográfico, impresión en
+          alta calidad, formato <b>A3</b>, papel de buen gramaje y <b>entrega en mano</b>. Tú eliges el nivel de
+          personalización; Lucía se encarga del resto.
+        </div>
+      </div>
 
       <div className="card" style={{ marginTop: 16 }}>
         <form
@@ -253,6 +314,7 @@ export default function PresupuestoClient() {
                 sobre_reforzado: extraSobre,
               },
 
+              // compat con backend
               plantilla_url: tpl || "",
               categoria_plantilla: cat || "",
 
@@ -287,14 +349,13 @@ export default function PresupuestoClient() {
               );
 
               if (res.ok) {
-                // ✅ GA4 / GTM: conversión real (solo si el envío fue OK)
                 try {
                   const w = window as any;
                   w.dataLayer = w.dataLayer || [];
                   w.dataLayer.push({
                     event: "submit_presupuesto",
-                    tipo_orla: tipoOrla, // "plantilla" | "exclusiva"
-                    estado_presupuesto: estado, // "informativo" | "interesado"
+                    tipo_orla: tipoOrla,
+                    estado_presupuesto: estado,
                     alumnos: alumnosN,
                     total_con_iva: calc.totalConIva,
                     plantilla_url: tpl || "",
@@ -506,7 +567,9 @@ export default function PresupuestoClient() {
 
           {status === "sent" && <div style={okBox}>✅ Enviado. Te llegará por email con validez 15 días.</div>}
 
-          {status === "error" && <div style={errBox}>❌ No se pudo enviar. Revisa los datos o escribe a Lucía por WhatsApp.</div>}
+          {status === "error" && (
+            <div style={errBox}>❌ No se pudo enviar. Revisa los datos o escribe a Lucía por WhatsApp.</div>
+          )}
         </form>
 
         <p style={{ marginTop: 10, fontSize: 13, color: "var(--muted)", lineHeight: 1.45 }}>
