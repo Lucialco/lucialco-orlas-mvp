@@ -1,6 +1,7 @@
 "use client";
 
 const WHATSAPP_LINK = "https://wa.me/34606849914";
+const PRESUPUESTO_ENTRY = "/presupuesto#elige";
 
 export default function HomeClient() {
   return (
@@ -26,7 +27,7 @@ export default function HomeClient() {
             </p>
 
             <div style={{ display: "flex", gap: 12, marginTop: 18, flexWrap: "wrap" }}>
-              <a href="/presupuesto" className="btnPrimary">
+              <a href={PRESUPUESTO_ENTRY} className="btnPrimary">
                 Solicitar presupuesto
               </a>
 
@@ -173,3 +174,4 @@ export default function HomeClient() {
     </div>
   );
 }
+
