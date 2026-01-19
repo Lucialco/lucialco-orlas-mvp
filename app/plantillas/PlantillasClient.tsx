@@ -33,7 +33,13 @@ const GROUPS: Group[] = [
   },
 ];
 
-export default function PlantillasClient({ data }: { data: PlantillasData }) {
+export default function PlantillasClient({
+  data,
+  onlyGroup,
+}: {
+  data: PlantillasData;
+  onlyGroup?: GroupKey;
+}) {
   const counts = useMemo(() => {
     const byKey: Record<GroupKey, number> = { GI: 0, PS: 0 };
     for (const g of GROUPS) {
@@ -41,6 +47,8 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
     }
     return byKey;
   }, [data]);
+
+  const visibleGroups = onlyGroup ? GROUPS.filter((g) => g.key === onlyGroup) : GROUPS;
 
   return (
     <div>
@@ -56,15 +64,19 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
       </p>
 
       <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <a href="/presupuesto" className="btnPrimary">Solicitar presupuesto</a>
-        <a href="/presupuesto?tipo=adhoc" className="btnOutline">Quiero diseño a medida</a>
+        <a href="/presupuesto" className="btnPrimary">
+          Solicitar presupuesto
+        </a>
+        <a href="/presupuesto?tipo=adhoc" className="btnOutline">
+          Quiero diseño a medida
+        </a>
       </div>
 
       <section style={{ marginTop: 22 }}>
-        <h2 style={{ marginBottom: 10 }}>Elige una etapa</h2>
+        <h2 style={{ marginBottom: 10 }}>{onlyGroup ? "Plantillas" : "Elige una etapa"}</h2>
 
         <div style={catsGrid}>
-          {GROUPS.map((g) => (
+          {visibleGroups.map((g) => (
             <div key={g.key} style={catCard}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
                 <div style={{ fontWeight: 900, fontSize: 16 }}>{g.label}</div>
@@ -73,14 +85,13 @@ export default function PlantillasClient({ data }: { data: PlantillasData }) {
                 </div>
               </div>
 
-              <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.5 }}>
-                {g.subtitle}
-              </div>
+              <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.5 }}>{g.subtitle}</div>
 
               <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <a href={g.href} className="btnPrimary" style={{ textDecoration: "none" }}>
                   Ver plantillas de {g.label}
                 </a>
+
                 <a href="/presupuesto" className="btnOutline" style={{ textDecoration: "none" }}>
                   Pedir presupuesto sin elegir ahora
                 </a>
