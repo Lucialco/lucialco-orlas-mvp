@@ -1,7 +1,6 @@
 "use client";
 
 const WHATSAPP_LINK = "https://wa.me/34606849914";
-const PRESUPUESTO_ENTRY = "/presupuesto#elige";
 
 export default function HomeClient() {
   return (
@@ -12,22 +11,28 @@ export default function HomeClient() {
           <div>
             <div className="badge">Orlas escolares · Fotos · Retoque · Diseño</div>
 
-            <h1 style={{ fontSize: 44, lineHeight: 1.05, margin: "14px 0 0" }}>
-              Orlas escolares sin complicaciones.
+            {/* ✅ H1 ajustado (punto 3) */}
+            <h1 style={{ fontSize: 46, lineHeight: 1.05, margin: "14px 0 0" }}>
+              <span style={{ background: "var(--brand-soft)", padding: "0 8px", borderRadius: 10, fontWeight: 900 }}>
+                Orlas escolares
+              </span>{" "}
+              <span style={{ fontWeight: 700 }}>sin complicaciones.</span>
               <br />
-              <span style={{ background: "var(--brand-soft)", padding: "0 6px", borderRadius: 10 }}>
-                Nos encargamos de todo.
+              <span style={{ fontSize: 40 }}>
+                <span style={{ background: "var(--brand-soft)", padding: "0 6px", borderRadius: 10, fontWeight: 900 }}>
+                  Nos encargamos de todo.
+                </span>
               </span>
             </h1>
 
             <p style={{ fontSize: 18, lineHeight: 1.55, marginTop: 14, color: "var(--text)" }}>
               Fotos, retoque y diseño <b>con creatividad humana</b>. Tú eliges la fecha.
               <br />
-              Lucía se ocupa del resto. Y sí: <b>puedes hablar con ella en todo momento</b>.
+              Nosotras nos ocupamos del resto. Y sí: <b>puedes hablar con nosotras en todo momento</b>.
             </p>
 
             <div style={{ display: "flex", gap: 12, marginTop: 18, flexWrap: "wrap" }}>
-              <a href={PRESUPUESTO_ENTRY} className="btnPrimary">
+              <a href="/presupuesto" className="btnPrimary">
                 Solicitar presupuesto
               </a>
 
@@ -36,7 +41,7 @@ export default function HomeClient() {
               </a>
 
               <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer" className="btnOutline">
-                Habla con Lucía
+                Habla con nosotras
               </a>
             </div>
 
@@ -65,25 +70,28 @@ export default function HomeClient() {
             </div>
           </div>
 
-          {/* Side card */}
+          {/* ✅ Side card: cambiaremos esto por carrusel (punto 1) en el siguiente bloque */}
           <div className="card" style={{ background: "var(--brand-soft)", height: "fit-content" }}>
-            <div style={{ fontWeight: 900, fontSize: 16 }}>Elige el punto de partida</div>
-
-            <div style={{ marginTop: 12, display: "grid", gap: 10, color: "var(--text)" }}>
-              <div>🧩 Plantilla (rápido)</div>
-              <div>🎨 Diseño a medida (único)</div>
-              <div>📅 Fecha de fotos confirmada</div>
-              <div>💬 Contacto directo con Lucía</div>
+            <div style={{ fontWeight: 900, fontSize: 16 }}>Plantillas destacadas</div>
+            <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.55 }}>
+              Algunas de las más vistas. Si quieres, mira el catálogo completo.
             </div>
 
-            <div style={{ marginTop: 14, display: "grid", gap: 10 }}>
-              <a href="/plantillas" className="btnPrimary">
-                Ver plantillas
-              </a>
-
-              <a href="/presupuesto?tipo=adhoc" className="btnOutline">
-                Pedir diseño a medida
-              </a>
+            <div className="card" style={{ marginTop: 12 }}>
+              <div style={{ color: "var(--muted)", lineHeight: 1.55 }}>
+                (Carrusel en el siguiente paso)
+              </div>
+              <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+                <a href="/plantillas" className="btnPrimary">
+                  Ver todas las plantillas
+                </a>
+                <a href="/presupuesto?tipo=adhoc" className="btnOutline">
+                  Pedir diseño a medida
+                </a>
+                <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer" className="btnOutline">
+                  Habla con nosotras
+                </a>
+              </div>
             </div>
 
             <div className="card" style={{ marginTop: 16 }}>
@@ -105,7 +113,7 @@ export default function HomeClient() {
           {[
             { n: "1", t: "Pide presupuesto", d: "Cuéntanos curso, número de alumnos y fechas orientativas." },
             { n: "2", t: "Reservamos fecha (señal 15%)", d: "Con la señal bloqueamos el día de las fotos en el calendario." },
-            { n: "3", t: "Sesión de fotos + diseño", d: "Lucía realiza las fotos y el equipo diseña la orla." },
+            { n: "3", t: "Sesión de fotos + diseño", d: "Hacemos las fotos y diseñamos la orla." },
             { n: "4", t: "Entrega y revisión", d: "Te enseñamos el resultado y cerramos la entrega." },
           ].map((s) => (
             <div key={s.n} className="card">
@@ -131,7 +139,6 @@ export default function HomeClient() {
           ))}
         </div>
 
-        {/* Differentiator */}
         <div className="card" style={{ marginTop: 18, background: "white" }}>
           <div className="badge">Creatividad humana</div>
           <div style={{ fontWeight: 900, marginTop: 10 }}>Aquí no hay automatismos sin alma.</div>
@@ -141,7 +148,6 @@ export default function HomeClient() {
           </p>
         </div>
 
-        {/* Final CTA */}
         <div
           className="card"
           style={{
@@ -166,7 +172,7 @@ export default function HomeClient() {
               Diseño a medida
             </a>
             <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer" className="btnOutline">
-              Habla con Lucía
+              Habla con nosotras
             </a>
           </div>
         </div>
