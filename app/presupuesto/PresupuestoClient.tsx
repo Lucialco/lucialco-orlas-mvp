@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-const LUCIA_PHONE_E164 = "34606849914"; // sin +, formato wa.me
+const LUCIA_PHONE_E164 = "34606849914";
 const WHATSAPP_LINK = `https://wa.me/${LUCIA_PHONE_E164}`;
 
 const PRICE = {
@@ -27,21 +27,16 @@ function toIntSafe(v: unknown, fallback = 0) {
   if (!Number.isFinite(n)) return fallback;
   return Math.max(0, Math.trunc(n));
 }
-
 function round2(n: number) {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
-
-// Normaliza a formato wa.me (solo dígitos) asumiendo ES si no hay prefijo
 function normalizePhoneForWhatsApp(input: string) {
   const digits = String(input || "").replace(/\D/g, "");
   if (!digits) return "";
-  if (digits.length >= 11) return digits; // ya tiene prefijo país
-  if (digits.length === 9) return `34${digits}`; // ES
+  if (digits.length >= 11) return digits;
+  if (digits.length === 9) return `34${digits}`;
   return digits;
 }
-
-// ===== Normalización + validación =====
 function normalizeName(v: string) {
   return String(v || "").trim().replace(/\s+/g, " ");
 }
@@ -51,9 +46,6 @@ function normalizeEmail(v: string) {
 function isValidEmail(v: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
-// ✅ Teléfono válido si:
-// - 9 dígitos (ES)
-// - 34 + 9 dígitos (11 en total)
 function isValidPhoneES(v: string) {
   const digits = String(v || "").replace(/\D/g, "");
   if (digits.length === 9) return true;
@@ -65,12 +57,10 @@ export default function PresupuestoClient() {
   const router = useRouter();
   const sp = useSearchParams();
 
-  // --- QS (compat) ---
+  // QS (compat)
   const tipoQS = sp.get("tipo") || ""; // "plantilla" | "adhoc"
-  // antiguo:
   const tplOld = sp.get("tpl") || "";
   const catOld = sp.get("cat") || "";
-  // nuevo:
   const tplNew = sp.get("plantilla_url") || "";
   const catNew = sp.get("categoria_plantilla") || "";
 
@@ -80,37 +70,29 @@ export default function PresupuestoClient() {
   const hasTpl = !!tpl;
   const hasTipo = tipoQS === "plantilla" || tipoQS === "adhoc";
 
-  // ✅ Estado para que, una vez el usuario elige, no siga apareciendo el bloque de elección
+  // ✅ si no viene nada, mostramos comparador hasta que el usuario elija
   const [choiceMade, setChoiceMade] = useState(false);
+  const needsChoice = useMemo(() => !hasTipo && !hasTpl && !choiceMade, [hasTipo, hasTpl, choiceMade]);
 
-  // Si no viene tipo ni plantilla y aún no ha elegido → mostramos selector
-  const needsChoice = useMemo(() => {
-    return !hasTipo && !hasTpl && !choiceMade;
-  }, [hasTipo, hasTpl, choiceMade]);
-
-  // elección local (solo relevante si entra “en blanco”)
   const [tipoChoice, setTipoChoice] = useState<TipoOrla>("plantilla");
 
   const tipoOrla: TipoOrla = useMemo(() => {
     if (tipoQS === "plantilla") return "plantilla";
     if (tipoQS === "adhoc") return "exclusiva";
     if (hasTpl) return "plantilla";
-    return tipoChoice; // si entra sin nada, depende de lo que elija
+    return tipoChoice;
   }, [tipoQS, hasTpl, tipoChoice]);
 
   const [status, setStatus] = useState<Status>("idle");
   const [estado, setEstado] = useState<EstadoPresupuesto>("informativo");
 
-  // Errores y mensaje general
   const [errors, setErrors] = useState<Errors>({});
   const [formMsg, setFormMsg] = useState<string>("");
 
-  // Extras
   const [extraBeca, setExtraBeca] = useState(false);
   const [extraTaza, setExtraTaza] = useState(false);
   const [extraSobre, setExtraSobre] = useState(false);
 
-  // Para cálculo en vivo
   const [alumnosStr, setAlumnosStr] = useState("");
   const alumnos = useMemo(() => toIntSafe(alumnosStr, 0), [alumnosStr]);
 
@@ -159,23 +141,20 @@ export default function PresupuestoClient() {
 
   const errorClass = (k: FieldKey) => (errors[k] ? "inputError" : "");
 
-  // ✅ Acciones del selector
-  const chooseExclusive = () => {
-    setTipoChoice("exclusiva");
-    setChoiceMade(true);
-    // Dejamos URL limpia y coherente (y evita que el bloque vuelva a salir)
-    router.replace("/presupuesto?tipo=adhoc");
-  };
-
-  const goToPlantillas = () => {
-    router.push("/plantillas");
-  };
-
-  const continuePlantillaNoSelect = () => {
+  // ✅ Elecciones del comparador
+  const goPlantillas = () => router.push("/plantillas");
+  const choosePlantillaNoSelect = () => {
     setTipoChoice("plantilla");
     setChoiceMade(true);
     router.replace("/presupuesto?tipo=plantilla");
   };
+  const chooseExclusiva = () => {
+    setTipoChoice("exclusiva");
+    setChoiceMade(true);
+    router.replace("/presupuesto?tipo=adhoc");
+  };
+
+  const showBanner = !needsChoice;
 
   return (
     <div>
@@ -193,34 +172,57 @@ export default function PresupuestoClient() {
         Elige el tipo de orla, añade extras si quieres y te enviamos el presupuesto por email (validez 15 días).
       </p>
 
-      {/* ✅ Selector (si entran sin tipo ni plantilla) */}
+      {/* ✅ Comparador (solo si entra desde “Solicitar presupuesto” sin elegir nada) */}
       {needsChoice && (
-        <div id="elige" className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
-          <div style={{ fontWeight: 900 }}>Antes de calcular el precio…</div>
-          <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.5 }}>
-            ¿Quieres partir de una <b>plantilla</b> (más económica) o prefieres un <b>diseño exclusivo</b>?
+        <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
+          <div style={{ fontWeight: 900, fontSize: 16 }}>Elige el punto de partida</div>
+          <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
+            No te preocupes: en ambos casos nos ocupamos de fotos, retoque, maquetación e impresión A3 en alta calidad.
           </div>
 
-          <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button type="button" className="btnPrimary" style={choiceBtn} onClick={goToPlantillas}>
-              Orla desde plantilla
-            </button>
+          <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+            {/* Plantilla */}
+            <div className="card" style={{ background: "white" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ fontWeight: 900 }}>Orla desde plantilla</div>
+                <div style={{ fontWeight: 900, color: "var(--brand-hover)" }}>{PRICE.plantilla.toFixed(2)} € / niñ@</div>
+              </div>
+              <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
+                Eliges una plantilla que ya tenemos y la adaptamos a tu centro (nombres, logos, composición y revisión final).
+              </div>
 
-            <button type="button" className="btnOutline" style={choiceBtn} onClick={chooseExclusive}>
-              Orla con diseño exclusivo
-            </button>
-          </div>
+              <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button type="button" className="btnPrimary" style={btnEqual} onClick={goPlantillas}>
+                  Ver plantillas
+                </button>
+                <button type="button" className="btnOutline" style={btnEqual} onClick={choosePlantillaNoSelect}>
+                  Seguir sin elegir plantilla
+                </button>
+              </div>
+            </div>
 
-          <div style={{ marginTop: 10 }}>
-            <button type="button" className="btnOutline" onClick={continuePlantillaNoSelect}>
-              Seguir sin elegir plantilla
-            </button>
+            {/* Exclusiva */}
+            <div className="card" style={{ background: "white" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                <div style={{ fontWeight: 900 }}>Orla con diseño exclusivo</div>
+                <div style={{ fontWeight: 900, color: "var(--brand-hover)" }}>{PRICE.exclusiva.toFixed(2)} € / niñ@</div>
+              </div>
+              <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
+                Nos dices temática/estilo y Lucía diseña una orla única desde cero. Ideal si quieres algo realmente personalizado.
+              </div>
+
+              <div style={{ marginTop: 10 }}>
+                <button type="button" className="btnPrimary" style={{ ...btnEqual, width: "100%" }} onClick={chooseExclusiva}>
+                  Quiero diseño exclusivo
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ✅ Banner (solo cuando ya hay decisión REAL) */}
-      {!needsChoice && banner && (
+      {/* ✅ Banner (solo cuando ya hay decisión) */}
+      {showBanner && (
         <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
           <div style={{ fontWeight: 900 }}>
             {banner.mode === "plantilla" ? "Has elegido una plantilla" : "Has elegido diseño exclusivo"}
@@ -264,12 +266,13 @@ export default function PresupuestoClient() {
       <div className="card" style={{ marginTop: 16 }}>
         <div style={{ fontWeight: 900 }}>Nos ocupamos de todo</div>
         <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
-          Diseño de la orla (si es exclusiva), maquetación, fotografías <i>in situ</i>, retoque fotográfico, impresión en
-          alta calidad, formato <b>A3</b>, papel de buen gramaje y <b>entrega en mano</b>. Tú eliges el nivel de
-          personalización; Lucía se encarga del resto.
+          Diseño de la orla (si es exclusiva), maquetación, fotografías <i>in situ</i>, retoque fotográfico, impresión en alta
+          calidad, formato <b>A3</b>, papel de buen gramaje y <b>entrega en mano</b>. Tú eliges el nivel de personalización;
+          Lucía se encarga del resto.
         </div>
       </div>
 
+      {/* Formulario (igual que tenías, no lo toco) */}
       <div className="card" style={{ marginTop: 16 }}>
         <form
           onSubmit={async (e) => {
@@ -280,7 +283,6 @@ export default function PresupuestoClient() {
             const formData = new FormData(form);
 
             const alumnosN = toIntSafe(alumnosStr, 0);
-
             const contacto = normalizeName(String(formData.get("contacto") || ""));
             const email = normalizeEmail(String(formData.get("email") || ""));
             const telefonoRaw = String(formData.get("telefono") || "").trim();
@@ -463,7 +465,6 @@ export default function PresupuestoClient() {
             />
           </Field>
 
-          {/* Estado */}
           <div style={{ display: "grid", gap: 6 }}>
             <label style={{ fontWeight: 800 }}>¿Qué quieres hacer ahora?</label>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -493,7 +494,6 @@ export default function PresupuestoClient() {
             </div>
           </div>
 
-          {/* Extras */}
           <div className="card" style={{ background: "var(--brand-soft)" }}>
             <div style={{ fontWeight: 900, marginBottom: 8 }}>Extras opcionales</div>
 
@@ -519,7 +519,6 @@ export default function PresupuestoClient() {
             </label>
           </div>
 
-          {/* Resumen */}
           <div className="card">
             <div style={{ fontWeight: 900, marginBottom: 8 }}>Resumen estimado</div>
 
@@ -566,35 +565,21 @@ export default function PresupuestoClient() {
             />
           </Field>
 
-          <button
-            type="submit"
-            className="btnPrimary"
-            disabled={status === "sending"}
-            style={{ opacity: status === "sending" ? 0.75 : 1 }}
-          >
+          <button type="submit" className="btnPrimary" disabled={status === "sending"} style={{ opacity: status === "sending" ? 0.75 : 1 }}>
             {status === "sending" ? "Enviando..." : "Enviar presupuesto"}
           </button>
 
           {status === "sent" && <div style={okBox}>✅ Enviado. Te llegará por email con validez 15 días.</div>}
-
-          {status === "error" && (
-            <div style={errBox}>❌ No se pudo enviar. Revisa los datos o escribe a Lucía por WhatsApp.</div>
-          )}
+          {status === "error" && <div style={errBox}>❌ No se pudo enviar. Revisa los datos o escribe a Lucía por WhatsApp.</div>}
         </form>
 
         <p style={{ marginTop: 10, fontSize: 13, color: "var(--muted)", lineHeight: 1.45 }}>
-          Nota: el presupuesto se envía por email. Si estás <b>interesado</b>, Lucía podrá ayudarte a cerrar fechas y
-          siguientes pasos.
+          Nota: el presupuesto se envía por email. Si estás <b>interesado</b>, Lucía podrá ayudarte a cerrar fechas y siguientes pasos.
         </p>
       </div>
 
       <div style={{ marginTop: 14 }}>
-        <a
-          href={WHATSAPP_LINK}
-          target="_blank"
-          rel="noreferrer"
-          style={{ color: "var(--brand-hover)", fontWeight: 900, textDecoration: "none" }}
-        >
+        <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer" style={{ color: "var(--brand-hover)", fontWeight: 900, textDecoration: "none" }}>
           💬 Si prefieres, escribe directamente a Lucía por WhatsApp
         </a>
       </div>
@@ -617,7 +602,6 @@ const inp: React.CSSProperties = {
   border: "1px solid var(--border)",
   fontSize: 14,
 };
-
 const txt: React.CSSProperties = {
   padding: "12px 12px",
   borderRadius: 10,
@@ -625,7 +609,6 @@ const txt: React.CSSProperties = {
   fontSize: 14,
   resize: "vertical",
 };
-
 const formMsgBox: React.CSSProperties = {
   padding: 12,
   borderRadius: 12,
@@ -634,7 +617,6 @@ const formMsgBox: React.CSSProperties = {
   color: "#9a3412",
   fontWeight: 900,
 };
-
 const okBox: React.CSSProperties = {
   marginTop: 10,
   padding: 12,
@@ -644,7 +626,6 @@ const okBox: React.CSSProperties = {
   color: "var(--brand-hover)",
   fontWeight: 900,
 };
-
 const errBox: React.CSSProperties = {
   marginTop: 10,
   padding: 12,
@@ -654,7 +635,6 @@ const errBox: React.CSSProperties = {
   color: "#7f1d1d",
   fontWeight: 900,
 };
-
 const checkRow: React.CSSProperties = { display: "flex", gap: 10, alignItems: "center", padding: "6px 0" };
 const row: React.CSSProperties = {
   display: "flex",
@@ -663,12 +643,7 @@ const row: React.CSSProperties = {
   alignItems: "baseline",
   padding: "4px 0",
 };
-
-// ✅ Botones del selector: mismo tamaño y responsive
-const choiceBtn: React.CSSProperties = {
-  flex: "1 1 260px",
-  width: "100%",
-};
+const btnEqual: React.CSSProperties = { flex: "1 1 260px", width: "100%" };
 
 function pill(active: boolean): React.CSSProperties {
   return {
