@@ -74,27 +74,28 @@ export default function PresupuestoClient() {
   const tplNew = sp.get("plantilla_url") || "";
   const catNew = sp.get("categoria_plantilla") || "";
 
-  const tpl = tplOld || tplNew; // unifica
+  const tpl = tplOld || tplNew;
   const cat = catOld || catNew;
 
-  // ¿Viene desde plantilla?
   const hasTpl = !!tpl;
+  const hasTipo = tipoQS === "plantilla" || tipoQS === "adhoc";
 
-  // Si no viene tipo ni plantilla: no asumimos nada, pedimos elección
+  // ✅ Estado para que, una vez el usuario elige, no siga apareciendo el bloque de elección
+  const [choiceMade, setChoiceMade] = useState(false);
+
+  // Si no viene tipo ni plantilla y aún no ha elegido → mostramos selector
   const needsChoice = useMemo(() => {
-    const hasTipo = tipoQS === "plantilla" || tipoQS === "adhoc";
-    return !hasTipo && !hasTpl;
-  }, [tipoQS, hasTpl]);
+    return !hasTipo && !hasTpl && !choiceMade;
+  }, [hasTipo, hasTpl, choiceMade]);
 
-  // Estado de elección cuando no viene definido
+  // elección local (solo relevante si entra “en blanco”)
   const [tipoChoice, setTipoChoice] = useState<TipoOrla>("plantilla");
 
   const tipoOrla: TipoOrla = useMemo(() => {
     if (tipoQS === "plantilla") return "plantilla";
     if (tipoQS === "adhoc") return "exclusiva";
     if (hasTpl) return "plantilla";
-    // si no hay nada, usamos la elección del usuario
-    return tipoChoice;
+    return tipoChoice; // si entra sin nada, depende de lo que elija
   }, [tipoQS, hasTpl, tipoChoice]);
 
   const [status, setStatus] = useState<Status>("idle");
@@ -158,6 +159,24 @@ export default function PresupuestoClient() {
 
   const errorClass = (k: FieldKey) => (errors[k] ? "inputError" : "");
 
+  // ✅ Acciones del selector
+  const chooseExclusive = () => {
+    setTipoChoice("exclusiva");
+    setChoiceMade(true);
+    // Dejamos URL limpia y coherente (y evita que el bloque vuelva a salir)
+    router.replace("/presupuesto?tipo=adhoc");
+  };
+
+  const goToPlantillas = () => {
+    router.push("/plantillas");
+  };
+
+  const continuePlantillaNoSelect = () => {
+    setTipoChoice("plantilla");
+    setChoiceMade(true);
+    router.replace("/presupuesto?tipo=plantilla");
+  };
+
   return (
     <div>
       <style jsx global>{`
@@ -174,42 +193,34 @@ export default function PresupuestoClient() {
         Elige el tipo de orla, añade extras si quieres y te enviamos el presupuesto por email (validez 15 días).
       </p>
 
-      {/* ✅ Paso UX: si entran sin elegir plantilla ni tipo */}
+      {/* ✅ Selector (si entran sin tipo ni plantilla) */}
       {needsChoice && (
-        <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
+        <div id="elige" className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
           <div style={{ fontWeight: 900 }}>Antes de calcular el precio…</div>
           <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.5 }}>
             ¿Quieres partir de una <b>plantilla</b> (más económica) o prefieres un <b>diseño exclusivo</b>?
           </div>
 
           <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button
-              type="button"
-              className={tipoChoice === "plantilla" ? "btnPrimary" : "btnOutline"}
-              onClick={() => setTipoChoice("plantilla")}
-            >
+            <button type="button" className="btnPrimary" style={choiceBtn} onClick={goToPlantillas}>
               Orla desde plantilla
             </button>
 
-            <button
-              type="button"
-              className={tipoChoice === "exclusiva" ? "btnPrimary" : "btnOutline"}
-              onClick={() => setTipoChoice("exclusiva")}
-            >
+            <button type="button" className="btnOutline" style={choiceBtn} onClick={chooseExclusive}>
               Orla con diseño exclusivo
             </button>
           </div>
 
           <div style={{ marginTop: 10 }}>
-            <a href="/plantillas" className="btnOutline">
-              Ver y elegir una plantilla
-            </a>
+            <button type="button" className="btnOutline" onClick={continuePlantillaNoSelect}>
+              Seguir sin elegir plantilla
+            </button>
           </div>
         </div>
       )}
 
-      {/* Banner de selección */}
-      {banner && (
+      {/* ✅ Banner (solo cuando ya hay decisión REAL) */}
+      {!needsChoice && banner && (
         <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
           <div style={{ fontWeight: 900 }}>
             {banner.mode === "plantilla" ? "Has elegido una plantilla" : "Has elegido diseño exclusivo"}
@@ -219,7 +230,7 @@ export default function PresupuestoClient() {
             <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={tpl}
+                src={encodeURI(tpl)}
                 alt={banner.title}
                 style={{
                   width: 120,
@@ -230,7 +241,7 @@ export default function PresupuestoClient() {
                 }}
               />
               <div>
-                <div style={{ fontWeight: 900 }}>{banner.title}</div>
+                <div style={{ fontWeight: 900 }}>{banner.title.replace(/\.webp$/i, "").replace(/\.jpe?g$/i, "")}</div>
                 <div style={{ color: "var(--muted)", fontSize: 13 }}>{cat ? `Categoría: ${cat}` : ""}</div>
                 <div style={{ marginTop: 8 }}>
                   <a href="/plantillas" className="btnOutline">
@@ -249,7 +260,7 @@ export default function PresupuestoClient() {
         </div>
       )}
 
-      {/* ✅ Texto “nos ocupamos de todo” (lo que pediste) */}
+      {/* ✅ Texto “nos ocupamos de todo” */}
       <div className="card" style={{ marginTop: 16 }}>
         <div style={{ fontWeight: 900 }}>Nos ocupamos de todo</div>
         <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
@@ -314,7 +325,6 @@ export default function PresupuestoClient() {
                 sobre_reforzado: extraSobre,
               },
 
-              // compat con backend
               plantilla_url: tpl || "",
               categoria_plantilla: cat || "",
 
@@ -652,6 +662,12 @@ const row: React.CSSProperties = {
   gap: 12,
   alignItems: "baseline",
   padding: "4px 0",
+};
+
+// ✅ Botones del selector: mismo tamaño y responsive
+const choiceBtn: React.CSSProperties = {
+  flex: "1 1 260px",
+  width: "100%",
 };
 
 function pill(active: boolean): React.CSSProperties {
