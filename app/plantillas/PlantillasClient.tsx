@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 
 type Plantilla = { src: string; title: string };
 type PlantillasData = Record<string, Plantilla[]>;
@@ -16,6 +16,13 @@ const GROUPS: Group[] = [
   { key: "GI", label: "Guardería / Infantil", raw: ["Guarderia", "Infantil"] },
   { key: "PS", label: "Primaria / Secundaria", raw: ["Primaria", "Secundaria"] },
 ];
+
+function withQuery_(base: string, params: Record<string, string>) {
+  const u = new URL(base, typeof window !== "undefined" ? window.location.origin : "https://orlas.lucialco.es");
+  Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, v));
+  // devolvemos solo path+query
+  return `${u.pathname}${u.search}`;
+}
 
 export default function PlantillasClient({
   data,
@@ -157,12 +164,27 @@ export default function PlantillasClient({
           <h2>{g.label}</h2>
 
           <div style={grid}>
-            {g.items.map((p) => (
-              <div key={p.src} style={card}>
-                <img src={p.src} alt={p.title} style={img} />
-                <div style={{ marginTop: 8, fontWeight: 700 }}>{p.title}</div>
-              </div>
-            ))}
+            {g.items.map((p) => {
+              const href = withQuery_("/presupuesto", {
+                tipo: "plantilla",
+                plantilla_url: p.src,
+                categoria_plantilla: g.label, // si prefieres el raw cat, lo cambiamos
+              });
+
+              return (
+                <a
+                  key={p.src}
+                  href={href}
+                  style={cardLink}
+                  aria-label={`Elegir plantilla: ${p.title}`}
+                  title={`Elegir plantilla: ${p.title}`}
+                >
+                  <img src={p.src} alt={p.title} style={img} />
+                  <div style={{ marginTop: 8, fontWeight: 700 }}>{p.title}</div>
+                  <div style={{ marginTop: 4, fontSize: 13, opacity: 0.75 }}>Elegir esta plantilla</div>
+                </a>
+              );
+            })}
           </div>
         </section>
       ))}
@@ -181,11 +203,15 @@ const grid: React.CSSProperties = {
   gap: 14,
 };
 
-const card: React.CSSProperties = {
+const cardLink: React.CSSProperties = {
   border: "1px solid var(--border)",
   borderRadius: 16,
   padding: 14,
   background: "white",
+  display: "block",
+  color: "inherit",
+  textDecoration: "none",
+  cursor: "pointer",
 };
 
 const img: React.CSSProperties = {
