@@ -5,24 +5,34 @@ import React, { useMemo, useState } from "react";
 type Plantilla = { src: string; title: string };
 type PlantillasData = Record<string, Plantilla[]>;
 
-// Categorías originales del JSON
+// Categorías originales del JSON (las mantenemos por compatibilidad, aunque aquí no renderizamos el grid)
 const RAW_CATS = ["Guarderia", "Infantil", "Primaria", "Secundaria", "Bachillerato"] as const;
 
 // Grupos visibles
 type GroupKey = "GI" | "PS";
-type Group = { key: GroupKey; label: string; raw: (typeof RAW_CATS)[number][] };
+type Group = { key: GroupKey; label: string; raw: (typeof RAW_CATS)[number][];
+
+  // target page
+  href: string;
+  subtitle: string;
+};
 
 const GROUPS: Group[] = [
-  { key: "GI", label: "Guardería / Infantil", raw: ["Guarderia", "Infantil"] },
-  { key: "PS", label: "Primaria / Secundaria", raw: ["Primaria", "Secundaria"] },
+  {
+    key: "GI",
+    label: "Guardería / Infantil",
+    raw: ["Guarderia", "Infantil"],
+    href: "/plantillas-infantil",
+    subtitle: "Estilos alegres y dulces, pensados para los más peques.",
+  },
+  {
+    key: "PS",
+    label: "Primaria / Secundaria",
+    raw: ["Primaria", "Secundaria"],
+    href: "/plantillas-primaria-secundaria",
+    subtitle: "Diseños más sobrios y actuales, con buena legibilidad.",
+  },
 ];
-
-function withQuery_(base: string, params: Record<string, string>) {
-  const u = new URL(base, typeof window !== "undefined" ? window.location.origin : "https://orlas.lucialco.es");
-  Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, v));
-  // devolvemos solo path+query
-  return `${u.pathname}${u.search}`;
-}
 
 export default function PlantillasClient({
   data,
@@ -31,192 +41,134 @@ export default function PlantillasClient({
   data: PlantillasData;
   onlyGroup?: GroupKey;
 }) {
-  const [sortMode, setSortMode] = useState<"prefijo" | "az" | "za">("prefijo");
-
-  /* ---------- ORDEN ---------- */
-  const sortedRaw = useMemo(() => {
-    const out: PlantillasData = {};
-    for (const cat of RAW_CATS) {
-      const items = [...(data[cat] ?? [])];
-
-      items.sort((a, b) => {
-        if (sortMode === "az") return a.title.localeCompare(b.title, "es");
-        if (sortMode === "za") return b.title.localeCompare(a.title, "es");
-        return a.title.localeCompare(b.title, "es");
-      });
-
-      out[cat] = items;
+  // Contadores por grupo (para mostrar “X plantillas”)
+  const counts = useMemo(() => {
+    const byKey: Record<GroupKey, number> = { GI: 0, PS: 0 };
+    for (const g of GROUPS) {
+      const n = g.raw.reduce((acc, rc) => acc + ((data as any)[rc]?.length ?? 0), 0);
+      byKey[g.key] = n;
     }
-    return out;
-  }, [data, sortMode]);
+    return byKey;
+  }, [data]);
 
-  /* ---------- AGRUPACIÓN ---------- */
-  const grouped = useMemo(() => {
-    const base = GROUPS.map((g) => ({
-      ...g,
-      items: g.raw.flatMap((rc) => sortedRaw[rc] ?? []),
-    })).filter((g) => g.items.length > 0);
+  // En /plantillas queremos SOLO selector de grupos.
+  // Si en el futuro quisieras reutilizar este componente para páginas de grupo, lo haremos aparte (otro componente).
+  const [selected, setSelected] = useState<GroupKey>("GI");
 
-    if (!onlyGroup) return base;
-    return base.filter((g) => g.key === onlyGroup);
-  }, [sortedRaw, onlyGroup]);
+  // COPY superior
+  const topCopy = (
+    <>
+      <p style={{ marginTop: 12, lineHeight: 1.6 }}>
+        Aquí no te obligo a decidir a ciegas: primero eliges <b>la etapa</b> y luego ves las plantillas.
+      </p>
+      <p style={{ lineHeight: 1.6 }}>
+        Si lo tienes claro desde ya, también puedes pedir <b>diseño exclusivo</b> (Lucía crea una orla única con vuestra temática).
+      </p>
+    </>
+  );
 
-  /* ---------- COPY (VERSIÓN ANTERIOR) ---------- */
-  const seoTopText =
-    onlyGroup === "GI" ? (
-      <>
-        <p>
-          En <strong>guardería e infantil</strong>, la orla es mucho más que una foto de grupo: es un recuerdo emocional
-          para las familias y un cierre bonito para el curso.
-        </p>
-        <p>
-          En Lucialco diseño <strong>plantillas de orlas infantiles</strong> pensadas para centros educativos: estilos
-          alegres, colores suaves y una composición clara que funciona bien tanto en impresión como en formato digital.
-        </p>
-        <p>
-          Me encargo de acompañarte en todo el proceso para que sea sencillo para el centro: recogida de fotos, ajustes
-          finales y entrega lista para imprimir, sin complicaciones.
-        </p>
-      </>
-    ) : onlyGroup === "PS" ? (
-      <>
-        <p>
-          En <strong>primaria y secundaria</strong>, la orla necesita un equilibrio claro: un diseño actual y atractivo,
-          pero sin perder sobriedad ni legibilidad.
-        </p>
-        <p>
-          Las <strong>plantillas de orlas para primaria y secundaria</strong> de Lucialco están pensadas para reflejar el
-          carácter del grupo y del centro, con composiciones limpias y tipografías claras.
-        </p>
-        <p>
-          El proceso está diseñado para ahorrar tiempo al centro: centralizamos la gestión de fotos, revisamos juntos el
-          resultado y entrego la orla final lista para imprimir.
-        </p>
-      </>
-    ) : null;
-
-  const seoBottomText =
-    onlyGroup === "GI" ? (
-      <>
-        <p>
-          Estas plantillas están pensadas especialmente para <strong>escuelas infantiles y colegios</strong>,
-          adaptándose al estilo de cada centro y al número de alumnos por aula.
-        </p>
-        <p>
-          Si ninguna plantilla encaja al 100 %, siempre puedes optar por un <strong>diseño a medida</strong>, manteniendo
-          la misma filosofía: cuidado en el detalle, trato cercano y un resultado profesional.
-        </p>
-      </>
-    ) : onlyGroup === "PS" ? (
-      <>
-        <p>
-          Estas plantillas funcionan especialmente bien en <strong>colegios de primaria e institutos</strong>, donde es
-          importante mantener una imagen cuidada y coherente con la etapa educativa.
-        </p>
-        <p>
-          Puedes partir de una plantilla existente o solicitar un <strong>diseño personalizado</strong>, adaptado a la
-          identidad del centro y a las necesidades concretas del curso.
-        </p>
-      </>
-    ) : null;
-
-  /* ---------- RENDER ---------- */
   return (
     <div>
-      <div className="badge">Plantillas · Elige una base o pide diseño exclusivo</div>
+      <div className="badge">Plantillas · Elige una categoría</div>
 
-      <h1 style={{ marginTop: 14 }}>
-        {onlyGroup === "GI"
-          ? "Plantillas de orlas infantiles"
-          : onlyGroup === "PS"
-          ? "Plantillas de orlas para primaria y secundaria"
-          : "Plantillas de orlas"}
-      </h1>
+      <h1 style={{ marginTop: 14 }}>Plantillas de orlas</h1>
 
-      {/* COPY SUPERIOR */}
-      {seoTopText && <div style={{ marginTop: 12, lineHeight: 1.6 }}>{seoTopText}</div>}
+      {topCopy}
 
       {/* CTA */}
       <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <a href="/presupuesto?tipo=adhoc" className="btnPrimary">
-          Quiero diseño a medida
+        <a href="/presupuesto" className="btnPrimary">
+          Solicitar presupuesto
         </a>
-        <a href="/presupuesto" className="btnOutline">
-          Pedir presupuesto sin elegir ahora
+        <a href="/presupuesto?tipo=adhoc" className="btnOutline">
+          Quiero diseño a medida
         </a>
       </div>
 
-      {/* CHIPS */}
-      {!onlyGroup && (
-        <div style={{ marginTop: 18, display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <a href="/plantillas-infantil" className="chip">
-            Guardería / Infantil
-          </a>
-          <a href="/plantillas-primaria-secundaria" className="chip">
-            Primaria / Secundaria
-          </a>
+      {/* Selector de categorías (zoom) */}
+      <section style={{ marginTop: 22 }}>
+        <h2 style={{ marginBottom: 10 }}>Elige una etapa</h2>
+
+        <div style={catsGrid}>
+          {GROUPS.map((g) => {
+            const active = selected === g.key;
+            return (
+              <button
+                key={g.key}
+                type="button"
+                onClick={() => setSelected(g.key)}
+                style={{
+                  ...catCard,
+                  ...(active ? catCardActive : {}),
+                }}
+                aria-pressed={active}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+                  <div style={{ fontWeight: 900, fontSize: 16 }}>{g.label}</div>
+                  <div style={{ fontWeight: 900, color: "var(--brand-hover)" }}>{counts[g.key]} plantillas</div>
+                </div>
+
+                <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.5 }}>{g.subtitle}</div>
+
+                <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <a href={g.href} className={active ? "btnPrimary" : "btnOutline"} style={{ textDecoration: "none" }}>
+                    Ver plantillas de {g.label}
+                  </a>
+
+                  <a href="/presupuesto" className="btnOutline" style={{ textDecoration: "none" }}>
+                    Pedir presupuesto sin elegir ahora
+                  </a>
+                </div>
+              </button>
+            );
+          })}
         </div>
-      )}
 
-      {/* GRID */}
-      {grouped.map((g) => (
-        <section key={g.key} style={{ marginTop: 32 }}>
-          <h2>{g.label}</h2>
-
-          <div style={grid}>
-            {g.items.map((p) => {
-              const href = withQuery_("/presupuesto", {
-                tipo: "plantilla",
-                plantilla_url: p.src,
-                categoria_plantilla: g.label, // si prefieres el raw cat, lo cambiamos
-              });
-
-              return (
-                <a
-                  key={p.src}
-                  href={href}
-                  style={cardLink}
-                  aria-label={`Elegir plantilla: ${p.title}`}
-                  title={`Elegir plantilla: ${p.title}`}
-                >
-                  <img src={p.src} alt={p.title} style={img} />
-                  <div style={{ marginTop: 8, fontWeight: 700 }}>{p.title}</div>
-                  <div style={{ marginTop: 4, fontSize: 13, opacity: 0.75 }}>Elegir esta plantilla</div>
-                </a>
-              );
-            })}
+        {/* Panel “seleccionado” (más grande) */}
+        <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
+          <div style={{ fontWeight: 900 }}>Seleccionado: {selected === "GI" ? "Guardería / Infantil" : "Primaria / Secundaria"}</div>
+          <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
+            Entra a ver las plantillas y, al clicar una, podrás verla grande y usarla para tu presupuesto.
           </div>
-        </section>
-      ))}
 
-      {/* COPY INFERIOR */}
-      {seoBottomText && <div style={{ marginTop: 32, lineHeight: 1.6 }}>{seoBottomText}</div>}
+          <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <a href={selected === "GI" ? "/plantillas-infantil" : "/plantillas-primaria-secundaria"} className="btnPrimary">
+              Ver plantillas
+            </a>
+            <a href="/presupuesto?tipo=adhoc" className="btnOutline">
+              Ir a diseño exclusivo
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Nota final */}
+      <div style={{ marginTop: 22, color: "var(--muted)", lineHeight: 1.6 }}>
+        <b>Tip:</b> si dudas entre plantilla y exclusivo, entra a <a href="/presupuesto" style={{ fontWeight: 900, color: "var(--brand-hover)" }}>presupuesto</a> y
+        verás ambas opciones con precio por alumno y qué incluye cada una.
+      </div>
     </div>
   );
 }
 
-/* ---------- ESTILOS ---------- */
-const grid: React.CSSProperties = {
-  marginTop: 14,
+const catsGrid: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))",
-  gap: 14,
+  gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+  gap: 12,
 };
 
-const cardLink: React.CSSProperties = {
+const catCard: React.CSSProperties = {
   border: "1px solid var(--border)",
   borderRadius: 16,
   padding: 14,
   background: "white",
-  display: "block",
-  color: "inherit",
-  textDecoration: "none",
+  textAlign: "left",
   cursor: "pointer",
+  transition: "transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease",
 };
 
-const img: React.CSSProperties = {
-  width: "100%",
-  height: 170,
-  objectFit: "cover",
-  borderRadius: 12,
+const catCardActive: React.CSSProperties = {
+  border: "1px solid var(--brand)",
+  boxShadow: "0 10px 26px rgba(0,0,0,0.08)",
+  transform: "scale(1.01)",
 };
