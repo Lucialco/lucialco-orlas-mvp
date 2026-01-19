@@ -362,7 +362,7 @@ export default function PresupuestoClient() {
 
                 try {
                   const res = await fetch(
-                    "https://script.google.com/macros/s/AKfycbyJr53MqrRdeAQMl9ebLjGDmz9VWyihCv9ar3Nksa8WPeECcXVJGK2hZHt1sbnPrBoEYA/exec",
+                    "https://script.google.com/macros/s/AKfycbwkkmSTfZhW3kkVFnXwLz_LXx0VR2DIwvPzt52bl9Z1bjZhXAaT0V5YWGKOCI30J6o6jA/exec",
                     {
                       method: "POST",
                       headers: { "Content-Type": "text/plain;charset=utf-8" },
