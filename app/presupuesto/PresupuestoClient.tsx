@@ -12,7 +12,7 @@ const PRICE = {
   extra_beca: 8,
   extra_taza: 5,
   extra_sobre: 3,
-  extra_fotos_recuerdo: 4.5, // ✅ NUEVO
+  extra_fotos_recuerdo: 4.5, // ✅ NUEVO (por alumno)
   iva_pct: 21,
 } as const;
 
@@ -161,6 +161,46 @@ export default function PresupuestoClient() {
           border: 1px solid #ef4444 !important;
           box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
         }
+        .tipWrap {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .tipIcon {
+          width: 18px;
+          height: 18px;
+          border-radius: 999px;
+          border: 1px solid var(--border);
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 900;
+          font-size: 12px;
+          color: var(--brand-hover);
+          background: white;
+          cursor: help;
+          user-select: none;
+        }
+        .tipBox {
+          position: absolute;
+          left: 0;
+          top: 26px;
+          width: min(320px, 78vw);
+          background: white;
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          padding: 10px 12px;
+          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+          color: var(--text);
+          line-height: 1.45;
+          font-size: 13px;
+          display: none;
+          z-index: 20;
+        }
+        .tipWrap:hover .tipBox {
+          display: block;
+        }
       `}</style>
 
       <div className="badge">Presupuesto · Validez 15 días · IVA 21%</div>
@@ -170,7 +210,6 @@ export default function PresupuestoClient() {
         Elige el tipo de orla, añade extras si quieres y te enviamos el presupuesto por email (validez 15 días).
       </p>
 
-      {/* ✅ Comparador vertical “chulo” */}
       {needsChoice && (
         <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
           <div style={{ fontWeight: 900, fontSize: 16 }}>Elige el punto de partida</div>
@@ -215,7 +254,6 @@ export default function PresupuestoClient() {
         </div>
       )}
 
-      {/* ✅ A partir de aquí SOLO si ya hay elección (si no, nada de formulario vacío) */}
       {!needsChoice && (
         <>
           <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
@@ -477,19 +515,35 @@ export default function PresupuestoClient() {
                   </span>
                 </label>
 
+                {/* ✅ Fotos de recuerdo con tooltip */}
                 <label style={checkRow}>
                   <input
                     type="checkbox"
                     checked={extraFotosRecuerdo}
                     onChange={(e) => setExtraFotosRecuerdo(e.target.checked)}
                   />
-                  <span>
-                    Fotos de recuerdo — <b>4,50 €</b> / unidad (por alumno)
+                  <span className="tipWrap">
+                    <span>
+                      Fotos de recuerdo — <b>4,50 €</b> / alumno
+                    </span>
+                    <span className="tipIcon" aria-label="Más info" title="Más info">
+                      i
+                    </span>
+                    <span className="tipBox">
+                      Pack de fotos individuales para las familias (ideal como recuerdo).
+                      <br />
+                      <b>Se calcula por alumno</b>. (Añadiremos un ejemplo visual en esta misma zona.)
+                    </span>
                   </span>
                 </label>
               </div>
 
-              <button type="submit" className="btnPrimary" disabled={status === "sending"} style={{ opacity: status === "sending" ? 0.75 : 1 }}>
+              <button
+                type="submit"
+                className="btnPrimary"
+                disabled={status === "sending"}
+                style={{ opacity: status === "sending" ? 0.75 : 1 }}
+              >
                 {status === "sending" ? "Enviando..." : "Enviar presupuesto"}
               </button>
 
