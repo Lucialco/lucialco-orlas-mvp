@@ -60,6 +60,10 @@ export default function PlantillasClient({
 
   const [open, setOpen] = useState<Plantilla | null>(null);
 
+  // RUTAS “SIN BUCLES”
+  const presupuestoPlantilla = "/presupuesto?tipo=plantilla";
+  const presupuestoExclusivo = "/presupuesto?tipo=adhoc";
+
   const header = (
     <>
       <div className="badge">Plantillas · Elige una categoría</div>
@@ -74,10 +78,10 @@ export default function PlantillasClient({
       </p>
 
       <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <Link href="/presupuesto" className="btnPrimary">
+        <Link href={presupuestoPlantilla} className="btnPrimary">
           Solicitar presupuesto
         </Link>
-        <Link href="/presupuesto?tipo=adhoc" className="btnOutline">
+        <Link href={presupuestoExclusivo} className="btnOutline">
           Quiero diseño a medida
         </Link>
         {group ? (
@@ -113,7 +117,7 @@ export default function PlantillasClient({
                     Ver plantillas de {g.label}
                   </Link>
 
-                  <Link href="/presupuesto" className="btnOutline" style={{ textDecoration: "none" }}>
+                  <Link href={presupuestoPlantilla} className="btnOutline" style={{ textDecoration: "none" }}>
                     Pedir presupuesto sin elegir ahora
                   </Link>
                 </div>
@@ -124,7 +128,7 @@ export default function PlantillasClient({
 
         <div style={{ marginTop: 22, color: "var(--muted)", lineHeight: 1.6 }}>
           <b>Tip:</b> si dudas entre plantilla y exclusivo, entra a{" "}
-          <Link href="/presupuesto" style={{ fontWeight: 900, color: "var(--brand-hover)" }}>
+          <Link href={presupuestoPlantilla} style={{ fontWeight: 900, color: "var(--brand-hover)" }}>
             presupuesto
           </Link>{" "}
           y verás ambas opciones con precio por alumno y qué incluye cada una.
@@ -190,10 +194,10 @@ export default function PlantillasClient({
           </ul>
 
           <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <Link href="/presupuesto" className="btnPrimary">
+            <Link href={presupuestoPlantilla} className="btnPrimary">
               Pedir presupuesto con extras
             </Link>
-            <Link href="/presupuesto?tipo=adhoc" className="btnOutline">
+            <Link href={presupuestoExclusivo} className="btnOutline">
               Quiero diseño exclusivo
             </Link>
           </div>
@@ -202,7 +206,7 @@ export default function PlantillasClient({
 
       <div style={{ marginTop: 22, color: "var(--muted)", lineHeight: 1.6 }}>
         <b>Tip:</b> cuando elijas una, pide{" "}
-        <Link href="/presupuesto" style={{ fontWeight: 900, color: "var(--brand-hover)" }}>
+        <Link href={presupuestoPlantilla} style={{ fontWeight: 900, color: "var(--brand-hover)" }}>
           presupuesto
         </Link>{" "}
         y lo dejamos cerrado.
@@ -255,14 +259,15 @@ export default function PlantillasClient({
 
             <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
               <Link
-                href={`/presupuesto?plantilla=${encodeURIComponent(open.src)}&plantillaTitulo=${encodeURIComponent(
-                  open.title
+                href={`/presupuesto?tipo=plantilla&tpl=${encodeURIComponent(open.src)}&cat=${encodeURIComponent(
+                  group.label
                 )}`}
                 className="btnPrimary"
               >
                 Elegir esta plantilla para el presupuesto
               </Link>
-              <Link href="/presupuesto?tipo=adhoc" className="btnOutline">
+
+              <Link href={presupuestoExclusivo} className="btnOutline">
                 Prefiero diseño exclusivo
               </Link>
             </div>
