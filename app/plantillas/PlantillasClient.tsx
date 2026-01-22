@@ -60,7 +60,6 @@ export default function PlantillasClient({
 
   const [open, setOpen] = useState<Plantilla | null>(null);
 
-  // CABECERA + CTA
   const header = (
     <>
       <div className="badge">Plantillas · Elige una categoría</div>
@@ -90,7 +89,7 @@ export default function PlantillasClient({
     </>
   );
 
-  // ---- CASO 1: página /plantillas -> selector de etapas
+  // /plantillas => selector
   if (!group) {
     return (
       <div>
@@ -134,7 +133,7 @@ export default function PlantillasClient({
     );
   }
 
-  // ---- CASO 2: páginas /plantillas-infantil y /plantillas-primaria-secundaria -> GRID
+  // /plantillas-infantil | /plantillas-primaria-secundaria => carrusel + extras
   return (
     <div>
       {header}
@@ -144,29 +143,65 @@ export default function PlantillasClient({
           {items.length} plantillas · {group.label}
         </h2>
 
-        <div style={grid}>
-          {items.map((p, idx) => (
-            <button
-              key={`${p.src}-${idx}`}
-              type="button"
-              onClick={() => setOpen(p)}
-              style={tile}
-              aria-label={`Ver ${p.title}`}
-            >
-              <img
-                src={p.src}
-                alt={p.title}
-                loading="lazy"
-                style={{ width: "100%", height: 220, objectFit: "cover", borderRadius: 12, background: "#f3f3f3" }}
-              />
-              <div style={{ marginTop: 10, fontWeight: 800, fontSize: 14, textAlign: "left" }}>{p.title}</div>
-            </button>
-          ))}
+        <div style={carouselWrap}>
+          <div style={carousel} aria-label="Carrusel de plantillas">
+            {items.map((p, idx) => (
+              <button
+                key={`${p.src}-${idx}`}
+                type="button"
+                onClick={() => setOpen(p)}
+                style={slide}
+                aria-label={`Ver ${p.title}`}
+              >
+                <img
+                  src={p.src}
+                  alt={p.title}
+                  loading="lazy"
+                  style={{
+                    width: "100%",
+                    height: 260,
+                    objectFit: "cover",
+                    borderRadius: 14,
+                    background: "#f3f3f3",
+                  }}
+                />
+                <div style={{ marginTop: 10, fontWeight: 900, fontSize: 14, textAlign: "left" }}>{p.title}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="card" style={{ marginTop: 14 }}>
+          <div style={{ fontWeight: 900, marginBottom: 8 }}>Extras opcionales</div>
+
+          <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7, color: "var(--muted)" }}>
+            <li>
+              <b>Beca</b> (banda/beca para alumnos y/o profesores)
+            </li>
+            <li>
+              <b>Foto de recuerdo</b> (impresa o digital)
+            </li>
+            <li>
+              <b>Decoraciones / iconos</b> por clase o temática
+            </li>
+            <li>
+              <b>Copias extra</b> y variantes de formato para imprimir
+            </li>
+          </ul>
+
+          <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <Link href="/presupuesto" className="btnPrimary">
+              Pedir presupuesto con extras
+            </Link>
+            <Link href="/presupuesto?tipo=adhoc" className="btnOutline">
+              Quiero diseño exclusivo
+            </Link>
+          </div>
         </div>
       </section>
 
       <div style={{ marginTop: 22, color: "var(--muted)", lineHeight: 1.6 }}>
-        <b>Tip:</b> cuando elijas una, solicita{" "}
+        <b>Tip:</b> cuando elijas una, pide{" "}
         <Link href="/presupuesto" style={{ fontWeight: 900, color: "var(--brand-hover)" }}>
           presupuesto
         </Link>{" "}
@@ -219,8 +254,13 @@ export default function PlantillasClient({
             </div>
 
             <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <Link href="/presupuesto" className="btnPrimary">
-                Solicitar presupuesto con esta plantilla
+              <Link
+                href={`/presupuesto?plantilla=${encodeURIComponent(open.src)}&plantillaTitulo=${encodeURIComponent(
+                  open.title
+                )}`}
+                className="btnPrimary"
+              >
+                Elegir esta plantilla para el presupuesto
               </Link>
               <Link href="/presupuesto?tipo=adhoc" className="btnOutline">
                 Prefiero diseño exclusivo
@@ -246,17 +286,30 @@ const catCard: React.CSSProperties = {
   background: "white",
 };
 
-const grid: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-  gap: 12,
+const carouselWrap: React.CSSProperties = {
+  overflow: "hidden",
+  borderRadius: 18,
 };
 
-const tile: React.CSSProperties = {
+const carousel: React.CSSProperties = {
+  display: "flex",
+  gap: 12,
+  overflowX: "auto",
+  scrollSnapType: "x mandatory",
+  paddingBottom: 10,
+  paddingTop: 4,
+  WebkitOverflowScrolling: "touch",
+};
+
+const slide: React.CSSProperties = {
+  minWidth: 260,
+  maxWidth: 260,
+  flex: "0 0 auto",
   border: "1px solid var(--border)",
-  borderRadius: 16,
+  borderRadius: 18,
   padding: 12,
   background: "white",
   cursor: "pointer",
   textAlign: "left",
+  scrollSnapAlign: "start",
 };
