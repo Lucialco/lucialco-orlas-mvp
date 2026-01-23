@@ -210,21 +210,29 @@ export default function PresupuestoClient() {
         Elige el tipo de orla, añade extras si quieres y te enviamos el presupuesto por email (validez 15 días).
       </p>
 
-      {needsChoice && (
-        <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
-          <div style={{ fontWeight: 900, fontSize: 16 }}>Elige el punto de partida</div>
-          <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
-            En ambos casos nos ocupamos de fotos, retoque, maquetación e impresión A3 en alta calidad.
-          </div>
+      {/* PLANTILLA */}
+<div style={choiceCard}>
+  <div>
+    <div style={choiceHeader}>
+      <div style={{ fontWeight: 900, fontSize: 16 }}>Orla desde plantilla</div>
+      <div style={choicePrice}>{PRICE.plantilla.toFixed(2)} € / niñ@</div>
+    </div>
 
-          {/* ✅ DOS BLOQUES EN PARALELO, IGUALES */}
-          <div
-            style={{
-              marginTop: 14,
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
-              gap: 14,
-            }}
+    <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
+      Eliges una plantilla que ya tenemos y la adaptamos a tu centro (nombres, logos, composición y revisión final).
+    </div>
+  </div>
+
+  <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+    <button
+      type="button"
+      className="btnPrimary"
+      onClick={() => router.push("/plantillas-infantil")}
+    >
+      Ver plantillas
+    </button>
+  </div>
+</div>
           >
             {/* PLANTILLA */}
             <div style={choiceCard}>
