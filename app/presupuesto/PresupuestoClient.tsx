@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 const LUCIA_PHONE_E164 = "34606849914";
@@ -217,15 +217,28 @@ export default function PresupuestoClient() {
             En ambos casos nos ocupamos de fotos, retoque, maquetación e impresión A3 en alta calidad.
           </div>
 
-          <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
-            <div className="card" style={{ background: "white" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                <div style={{ fontWeight: 900, fontSize: 16 }}>Orla desde plantilla</div>
-                <div style={{ fontWeight: 900, color: "var(--brand-hover)" }}>{PRICE.plantilla.toFixed(2)} € / niñ@</div>
+          {/* ✅ DOS BLOQUES EN PARALELO, IGUALES */}
+          <div
+            style={{
+              marginTop: 14,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+              gap: 14,
+            }}
+          >
+            {/* PLANTILLA */}
+            <div style={choiceCard}>
+              <div>
+                <div style={choiceHeader}>
+                  <div style={{ fontWeight: 900, fontSize: 16 }}>Orla desde plantilla</div>
+                  <div style={choicePrice}>{PRICE.plantilla.toFixed(2)} € / niñ@</div>
+                </div>
+
+                <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
+                  Eliges una plantilla que ya tenemos y la adaptamos a tu centro (nombres, logos, composición y revisión final).
+                </div>
               </div>
-              <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
-                Eliges una plantilla que ya tenemos y la adaptamos a tu centro (nombres, logos, composición y revisión final).
-              </div>
+
               <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
                 <button type="button" className="btnPrimary" onClick={goPlantillas}>
                   Ver plantillas
@@ -236,14 +249,19 @@ export default function PresupuestoClient() {
               </div>
             </div>
 
-            <div className="card" style={{ background: "white" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                <div style={{ fontWeight: 900, fontSize: 16 }}>Orla con diseño exclusivo</div>
-                <div style={{ fontWeight: 900, color: "var(--brand-hover)" }}>{PRICE.exclusiva.toFixed(2)} € / niñ@</div>
+            {/* EXCLUSIVO */}
+            <div style={choiceCard}>
+              <div>
+                <div style={choiceHeader}>
+                  <div style={{ fontWeight: 900, fontSize: 16 }}>Orla con diseño exclusivo</div>
+                  <div style={choicePrice}>{PRICE.exclusiva.toFixed(2)} € / niñ@</div>
+                </div>
+
+                <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
+                  Nos dices temática/estilo y diseñamos una orla única desde cero. Ideal si quieres algo realmente personalizado.
+                </div>
               </div>
-              <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
-                Nos dices temática/estilo y diseñamos una orla única desde cero. Ideal si quieres algo realmente personalizado.
-              </div>
+
               <div style={{ marginTop: 12 }}>
                 <button type="button" className="btnPrimary" onClick={chooseExclusiva}>
                   Quiero diseño exclusivo
@@ -515,7 +533,6 @@ export default function PresupuestoClient() {
                   </span>
                 </label>
 
-                {/* ✅ Fotos de recuerdo con tooltip */}
                 <label style={checkRow}>
                   <input
                     type="checkbox"
@@ -568,7 +585,7 @@ export default function PresupuestoClient() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div style={{ display: "grid", gap: 6 }}>
       <label style={{ fontWeight: 800 }}>{label}</label>
@@ -583,6 +600,7 @@ const inp: React.CSSProperties = {
   border: "1px solid var(--border)",
   fontSize: 14,
 };
+
 const formMsgBox: React.CSSProperties = {
   padding: 12,
   borderRadius: 12,
@@ -591,6 +609,7 @@ const formMsgBox: React.CSSProperties = {
   color: "#9a3412",
   fontWeight: 900,
 };
+
 const okBox: React.CSSProperties = {
   marginTop: 10,
   padding: 12,
@@ -600,6 +619,7 @@ const okBox: React.CSSProperties = {
   color: "var(--brand-hover)",
   fontWeight: 900,
 };
+
 const errBox: React.CSSProperties = {
   marginTop: 10,
   padding: 12,
@@ -609,6 +629,7 @@ const errBox: React.CSSProperties = {
   color: "#7f1d1d",
   fontWeight: 900,
 };
+
 const checkRow: React.CSSProperties = { display: "flex", gap: 10, alignItems: "center", padding: "6px 0" };
 
 function pill(active: boolean): React.CSSProperties {
@@ -625,3 +646,27 @@ function pill(active: boolean): React.CSSProperties {
     cursor: "pointer",
   };
 }
+
+/* ✅ estilos para los 2 bloques del selector */
+const choiceCard: React.CSSProperties = {
+  background: "white",
+  border: "1px solid var(--border)",
+  borderRadius: 16,
+  padding: 16,
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "space-between",
+};
+
+const choiceHeader: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  gap: 12,
+  alignItems: "baseline",
+};
+
+const choicePrice: React.CSSProperties = {
+  fontWeight: 900,
+  color: "var(--brand-hover)",
+  whiteSpace: "nowrap",
+};
