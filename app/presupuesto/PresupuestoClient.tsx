@@ -70,17 +70,15 @@ export default function PresupuestoClient() {
   const hasTpl = !!tpl;
   const hasTipo = tipoQS === "plantilla" || tipoQS === "adhoc";
 
-  const [choiceMade, setChoiceMade] = useState(false);
-  const needsChoice = useMemo(() => !hasTipo && !hasTpl && !choiceMade, [hasTipo, hasTpl, choiceMade]);
-
-  const [tipoChoice, setTipoChoice] = useState<TipoOrla>("plantilla");
+  // ✅ si viene plantilla, es plantilla. si viene tipo=adhoc, es exclusiva. si no viene nada, mostramos selector.
+  const needsChoice = useMemo(() => !hasTipo && !hasTpl, [hasTipo, hasTpl]);
 
   const tipoOrla: TipoOrla = useMemo(() => {
     if (tipoQS === "plantilla") return "plantilla";
     if (tipoQS === "adhoc") return "exclusiva";
     if (hasTpl) return "plantilla";
-    return tipoChoice;
-  }, [tipoQS, hasTpl, tipoChoice]);
+    return "plantilla";
+  }, [tipoQS, hasTpl]);
 
   const [status, setStatus] = useState<Status>("idle");
   const [estado, setEstado] = useState<EstadoPresupuesto>("informativo");
@@ -104,6 +102,11 @@ export default function PresupuestoClient() {
     return { mode: "exclusiva" as const, title: "Diseño exclusivo" };
   }, [tipoOrla, tpl]);
 
+  useMemo(() => {
+    // (calc se usa para futuro/si quieres mostrar resumen precio; lo dejo intacto aunque no se renderice)
+    return null;
+  }, []);
+
   const calc = useMemo(() => {
     const unitBase = tipoOrla === "plantilla" ? PRICE.plantilla : PRICE.exclusiva;
     const baseSinIva = alumnos * unitBase;
@@ -112,7 +115,7 @@ export default function PresupuestoClient() {
       alumnos * (extraBeca ? PRICE.extra_beca : 0) +
       alumnos * (extraTaza ? PRICE.extra_taza : 0) +
       alumnos * (extraSobre ? PRICE.extra_sobre : 0) +
-      alumnos * (extraFotosRecuerdo ? PRICE.extra_fotos_recuerdo : 0); // ✅ NUEVO
+      alumnos * (extraFotosRecuerdo ? PRICE.extra_fotos_recuerdo : 0);
 
     const subtotalSinIva = baseSinIva + extrasSinIva;
     const iva = subtotalSinIva * (PRICE.iva_pct / 100);
@@ -142,17 +145,8 @@ export default function PresupuestoClient() {
 
   const errorClass = (k: FieldKey) => (errors[k] ? "inputError" : "");
 
-  const goPlantillas = () => router.push("/plantillas");
-  const choosePlantillaNoSelect = () => {
-    setTipoChoice("plantilla");
-    setChoiceMade(true);
-    router.replace("/presupuesto?tipo=plantilla");
-  };
-  const chooseExclusiva = () => {
-    setTipoChoice("exclusiva");
-    setChoiceMade(true);
-    router.replace("/presupuesto?tipo=adhoc");
-  };
+  const goPlantillasDirect = () => router.push("/plantillas-infantil");
+  const chooseExclusiva = () => router.replace("/presupuesto?tipo=adhoc");
 
   return (
     <div>
@@ -210,29 +204,20 @@ export default function PresupuestoClient() {
         Elige el tipo de orla, añade extras si quieres y te enviamos el presupuesto por email (validez 15 días).
       </p>
 
-      {/* PLANTILLA */}
-<div style={choiceCard}>
-  <div>
-    <div style={choiceHeader}>
-      <div style={{ fontWeight: 900, fontSize: 16 }}>Orla desde plantilla</div>
-      <div style={choicePrice}>{PRICE.plantilla.toFixed(2)} € / niñ@</div>
-    </div>
+      {needsChoice && (
+        <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
+          <div style={{ fontWeight: 900, fontSize: 16 }}>Elige el punto de partida</div>
+          <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
+            En ambos casos nos ocupamos de fotos, retoque, maquetación e impresión A3 en alta calidad.
+          </div>
 
-    <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
-      Eliges una plantilla que ya tenemos y la adaptamos a tu centro (nombres, logos, composición y revisión final).
-    </div>
-  </div>
-
-  <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-    <button
-      type="button"
-      className="btnPrimary"
-      onClick={() => router.push("/plantillas-infantil")}
-    >
-      Ver plantillas
-    </button>
-  </div>
-</div>
+          <div
+            style={{
+              marginTop: 14,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+              gap: 14,
+            }}
           >
             {/* PLANTILLA */}
             <div style={choiceCard}>
@@ -248,11 +233,8 @@ export default function PresupuestoClient() {
               </div>
 
               <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-                <button type="button" className="btnPrimary" onClick={goPlantillas}>
+                <button type="button" className="btnPrimary" onClick={goPlantillasDirect}>
                   Ver plantillas
-                </button>
-                <button type="button" className="btnOutline" onClick={choosePlantillaNoSelect}>
-                  Seguir sin elegir plantilla
                 </button>
               </div>
             </div>
@@ -304,7 +286,7 @@ export default function PresupuestoClient() {
                   <div style={{ fontWeight: 900 }}>{banner.title.replace(/\.webp$/i, "").replace(/\.jpe?g$/i, "")}</div>
                   <div style={{ color: "var(--muted)", fontSize: 13 }}>{cat ? `Categoría: ${cat}` : ""}</div>
                   <div style={{ marginTop: 8 }}>
-                    <a href="/plantillas" className="btnOutline">
+                    <a href="/plantillas-infantil" className="btnOutline">
                       Cambiar plantilla
                     </a>
                   </div>
@@ -379,7 +361,7 @@ export default function PresupuestoClient() {
                     beca_graduacion: extraBeca,
                     taza: extraTaza,
                     sobre_reforzado: extraSobre,
-                    fotos_recuerdo: extraFotosRecuerdo, // ✅ NUEVO
+                    fotos_recuerdo: extraFotosRecuerdo,
                   },
 
                   plantilla_url: tpl || "",
@@ -678,3 +660,4 @@ const choicePrice: React.CSSProperties = {
   color: "var(--brand-hover)",
   whiteSpace: "nowrap",
 };
+
