@@ -102,11 +102,6 @@ export default function PresupuestoClient() {
     return { mode: "exclusiva" as const, title: "Diseño exclusivo" };
   }, [tipoOrla, tpl]);
 
-  useMemo(() => {
-    // (calc se usa para futuro/si quieres mostrar resumen precio; lo dejo intacto aunque no se renderice)
-    return null;
-  }, []);
-
   const calc = useMemo(() => {
     const unitBase = tipoOrla === "plantilla" ? PRICE.plantilla : PRICE.exclusiva;
     const baseSinIva = alumnos * unitBase;
@@ -145,8 +140,18 @@ export default function PresupuestoClient() {
 
   const errorClass = (k: FieldKey) => (errors[k] ? "inputError" : "");
 
-  const goPlantillasDirect = () => router.push("/plantillas-infantil");
+  // ✅ FLUJO: desde presupuesto te llevo al selector de etapas
+  const goPlantillasDirect = () => router.push("/plantillas");
   const chooseExclusiva = () => router.replace("/presupuesto?tipo=adhoc");
+
+  // ✅ Botones iguales (mismo alto/ancho, misma alineación)
+  const equalBtn: React.CSSProperties = {
+    width: "100%",
+    minHeight: 46,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+  };
 
   return (
     <div>
@@ -233,7 +238,7 @@ export default function PresupuestoClient() {
               </div>
 
               <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-                <button type="button" className="btnPrimary" onClick={goPlantillasDirect}>
+                <button type="button" className="btnPrimary" style={equalBtn} onClick={goPlantillasDirect}>
                   Ver plantillas
                 </button>
               </div>
@@ -252,8 +257,8 @@ export default function PresupuestoClient() {
                 </div>
               </div>
 
-              <div style={{ marginTop: 12 }}>
-                <button type="button" className="btnPrimary" onClick={chooseExclusiva}>
+              <div style={{ marginTop: 12, display: "grid" }}>
+                <button type="button" className="btnPrimary" style={equalBtn} onClick={chooseExclusiva}>
                   Quiero diseño exclusivo
                 </button>
               </div>
@@ -286,7 +291,7 @@ export default function PresupuestoClient() {
                   <div style={{ fontWeight: 900 }}>{banner.title.replace(/\.webp$/i, "").replace(/\.jpe?g$/i, "")}</div>
                   <div style={{ color: "var(--muted)", fontSize: 13 }}>{cat ? `Categoría: ${cat}` : ""}</div>
                   <div style={{ marginTop: 8 }}>
-                    <a href="/plantillas-infantil" className="btnOutline">
+                    <a href="/plantillas" className="btnOutline">
                       Cambiar plantilla
                     </a>
                   </div>
@@ -660,4 +665,3 @@ const choicePrice: React.CSSProperties = {
   color: "var(--brand-hover)",
   whiteSpace: "nowrap",
 };
-
