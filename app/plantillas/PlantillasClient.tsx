@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 
 type Plantilla = { src: string; title: string };
@@ -71,7 +71,7 @@ export default function PlantillasClient({
       <h1 style={{ marginTop: 14 }}>{group ? `Plantillas ${group.label}` : "Plantillas de orlas"}</h1>
 
       <p style={{ marginTop: 12, lineHeight: 1.6 }}>
-        Aquí no te obligo a decidir a ciegas: primero eliges <b>la etapa</b> y luego ves las plantillas.
+        Primero eliges <b>la etapa</b> y luego ves las plantillas.
       </p>
       <p style={{ lineHeight: 1.6 }}>
         Si lo tienes claro desde ya, también puedes pedir <b>diseño exclusivo</b> (Lucía crea una orla única con vuestra temática).
@@ -117,8 +117,8 @@ export default function PlantillasClient({
                     Ver plantillas de {g.label}
                   </Link>
 
-                  <Link href={presupuestoPlantilla} className="btnOutline" style={{ textDecoration: "none" }}>
-                    Pedir presupuesto sin elegir ahora
+                  <Link href={presupuestoExclusivo} className="btnOutline" style={{ textDecoration: "none" }}>
+                    Prefiero diseño exclusivo
                   </Link>
                 </div>
               </div>
@@ -127,17 +127,54 @@ export default function PlantillasClient({
         </section>
 
         <div style={{ marginTop: 22, color: "var(--muted)", lineHeight: 1.6 }}>
-          <b>Tip:</b> si dudas entre plantilla y exclusivo, entra a{" "}
-          <Link href={presupuestoPlantilla} style={{ fontWeight: 900, color: "var(--brand-hover)" }}>
-            presupuesto
+          <b>Tip:</b> si no te encaja ninguna plantilla, te vas a{" "}
+          <Link href={presupuestoExclusivo} style={{ fontWeight: 900, color: "var(--brand-hover)" }}>
+            diseño exclusivo
           </Link>{" "}
-          y verás ambas opciones con precio por alumno y qué incluye cada una.
+          y lo hacemos a medida.
         </div>
       </div>
     );
   }
 
-  // /plantillas-infantil | /plantillas-primaria-secundaria => carrusel + extras
+  // ====== CARRUSEL CON FLECHAS ======
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const [canLeft, setCanLeft] = useState(false);
+  const [canRight, setCanRight] = useState(false);
+
+  const refreshArrows = () => {
+    const el = trackRef.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    setCanLeft(el.scrollLeft > 2);
+    setCanRight(el.scrollLeft < max - 2);
+  };
+
+  useEffect(() => {
+    refreshArrows();
+    const el = trackRef.current;
+    if (!el) return;
+
+    const onScroll = () => refreshArrows();
+    const onResize = () => refreshArrows();
+
+    el.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      el.removeEventListener("scroll", onScroll as any);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [items.length]);
+
+  const scrollByCards = (dir: -1 | 1) => {
+    const el = trackRef.current;
+    if (!el) return;
+    const step = Math.max(280, Math.floor(el.clientWidth * 0.85));
+    el.scrollBy({ left: dir * step, behavior: "smooth" });
+  };
+
+  // /plantillas-infantil | /plantillas-primaria-secundaria
   return (
     <div>
       {header}
@@ -147,8 +184,35 @@ export default function PlantillasClient({
           {items.length} plantillas · {group.label}
         </h2>
 
-        <div style={carouselWrap}>
-          <div style={carousel} aria-label="Carrusel de plantillas">
+        {/* Carrusel */}
+        <div style={carouselShell}>
+          <div style={carouselTopBar}>
+            <button
+              type="button"
+              className="btnOutline"
+              onClick={() => scrollByCards(-1)}
+              disabled={!canLeft}
+              style={{ opacity: canLeft ? 1 : 0.4 }}
+            >
+              ←
+            </button>
+
+            <div style={{ color: "var(--muted)", fontWeight: 800, fontSize: 13 }}>
+              Desliza o usa las flechas
+            </div>
+
+            <button
+              type="button"
+              className="btnOutline"
+              onClick={() => scrollByCards(1)}
+              disabled={!canRight}
+              style={{ opacity: canRight ? 1 : 0.4 }}
+            >
+              →
+            </button>
+          </div>
+
+          <div ref={trackRef} style={carousel} aria-label="Carrusel de plantillas">
             {items.map((p, idx) => (
               <button
                 key={`${p.src}-${idx}`}
@@ -175,41 +239,66 @@ export default function PlantillasClient({
           </div>
         </div>
 
-        <div className="card" style={{ marginTop: 14 }}>
-          <div style={{ fontWeight: 900, marginBottom: 8 }}>Extras opcionales</div>
+        {/* Dos bloques iguales (mismo look que selector) */}
+        <div
+          style={{
+            marginTop: 14,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            gap: 14,
+          }}
+        >
+          <div style={infoCard}>
+            <div style={{ fontWeight: 900, marginBottom: 8 }}>Cómo funciona</div>
 
-          <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7, color: "var(--muted)" }}>
-            <li>
-              <b>Beca</b> (banda/beca para alumnos y/o profesores)
-            </li>
-            <li>
-              <b>Foto de recuerdo</b> (impresa o digital)
-            </li>
-            <li>
-              <b>Decoraciones / iconos</b> por clase o temática
-            </li>
-            <li>
-              <b>Copias extra</b> y variantes de formato para imprimir
-            </li>
-          </ul>
+            <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7, color: "var(--muted)" }}>
+              <li>Elige una plantilla del carrusel.</li>
+              <li>Pulsa “Elegir esta plantilla” y rellena el presupuesto.</li>
+              <li>Adaptamos nombres, logos, composición y te enviamos el presupuesto final.</li>
+            </ol>
 
-          <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <Link href={presupuestoPlantilla} className="btnPrimary">
-              Pedir presupuesto con extras
-            </Link>
-            <Link href={presupuestoExclusivo} className="btnOutline">
-              Quiero diseño exclusivo
-            </Link>
+            <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <Link href={presupuestoPlantilla} className="btnOutline">
+                Ir a presupuesto
+              </Link>
+              <Link href={presupuestoExclusivo} className="btnOutline">
+                Prefiero exclusivo
+              </Link>
+            </div>
+          </div>
+
+          <div style={infoCard}>
+            <div style={{ fontWeight: 900, marginBottom: 8 }}>Extras opcionales</div>
+
+            <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7, color: "var(--muted)" }}>
+              <li>
+                <b>Beca</b> (banda/beca para alumnos y/o profesores)
+              </li>
+              <li>
+                <b>Fotos de recuerdo</b> (pack por alumno)
+              </li>
+              <li>
+                <b>Taza</b> personalizada
+              </li>
+              <li>
+                <b>Sobre reforzado</b> con nombre
+              </li>
+            </ul>
+
+            <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <Link href={presupuestoPlantilla} className="btnPrimary">
+                Pedir presupuesto
+              </Link>
+              <Link href={presupuestoExclusivo} className="btnOutline">
+                Quiero diseño exclusivo
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
       <div style={{ marginTop: 22, color: "var(--muted)", lineHeight: 1.6 }}>
-        <b>Tip:</b> cuando elijas una, pide{" "}
-        <Link href={presupuestoPlantilla} style={{ fontWeight: 900, color: "var(--brand-hover)" }}>
-          presupuesto
-        </Link>{" "}
-        y lo dejamos cerrado.
+        <b>Tip:</b> abre una plantilla, mírala grande, y elige la que más encaje. Cero dramas, cero laberintos.
       </div>
 
       {/* Lightbox */}
@@ -259,7 +348,7 @@ export default function PlantillasClient({
 
             <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
               <Link
-                href={`/presupuesto?tipo=plantilla&tpl=${encodeURIComponent(open.src)}&cat=${encodeURIComponent(
+                href={`/presupuesto?tipo=plantilla&plantilla_url=${encodeURIComponent(open.src)}&categoria_plantilla=${encodeURIComponent(
                   group.label
                 )}`}
                 className="btnPrimary"
@@ -291,9 +380,16 @@ const catCard: React.CSSProperties = {
   background: "white",
 };
 
-const carouselWrap: React.CSSProperties = {
-  overflow: "hidden",
+const carouselShell: React.CSSProperties = {
   borderRadius: 18,
+};
+
+const carouselTopBar: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 10,
+  marginBottom: 10,
 };
 
 const carousel: React.CSSProperties = {
@@ -318,3 +414,11 @@ const slide: React.CSSProperties = {
   textAlign: "left",
   scrollSnapAlign: "start",
 };
+
+const infoCard: React.CSSProperties = {
+  border: "1px solid var(--border)",
+  borderRadius: 16,
+  padding: 14,
+  background: "white",
+};
+
