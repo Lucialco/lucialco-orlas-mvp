@@ -1,6 +1,7 @@
+// app/plantillas/PlantillasClient.tsx
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 
 type Plantilla = { src: string; title: string };
@@ -34,6 +35,33 @@ const GROUPS: Group[] = [
   },
 ];
 
+const EXTRAS = [
+  {
+    key: "beca",
+    title: "Beca (banda)",
+    subtitle: "Para alumnos y/o profes",
+    icon: "🎓",
+  },
+  {
+    key: "recuerdo",
+    title: "Fotos de recuerdo",
+    subtitle: "Pack por alumno",
+    icon: "📸",
+  },
+  {
+    key: "taza",
+    title: "Taza personalizada",
+    subtitle: "Con foto / nombre",
+    icon: "☕",
+  },
+  {
+    key: "sobre",
+    title: "Sobre reforzado",
+    subtitle: "Con nombre",
+    icon: "✉️",
+  },
+];
+
 export default function PlantillasClient({
   data,
   onlyGroup,
@@ -60,7 +88,6 @@ export default function PlantillasClient({
 
   const [open, setOpen] = useState<Plantilla | null>(null);
 
-  // RUTAS “SIN BUCLES”
   const presupuestoPlantilla = "/presupuesto?tipo=plantilla";
   const presupuestoExclusivo = "/presupuesto?tipo=adhoc";
 
@@ -71,7 +98,7 @@ export default function PlantillasClient({
       <h1 style={{ marginTop: 14 }}>{group ? `Plantillas ${group.label}` : "Plantillas de orlas"}</h1>
 
       <p style={{ marginTop: 12, lineHeight: 1.6 }}>
-        Primero eliges <b>la etapa</b> y luego ves las plantillas.
+        Aquí no te obligo a decidir a ciegas: primero eliges <b>la etapa</b> y luego ves las plantillas.
       </p>
       <p style={{ lineHeight: 1.6 }}>
         Si lo tienes claro desde ya, también puedes pedir <b>diseño exclusivo</b> (Lucía crea una orla única con vuestra temática).
@@ -117,8 +144,8 @@ export default function PlantillasClient({
                     Ver plantillas de {g.label}
                   </Link>
 
-                  <Link href={presupuestoExclusivo} className="btnOutline" style={{ textDecoration: "none" }}>
-                    Prefiero diseño exclusivo
+                  <Link href={presupuestoPlantilla} className="btnOutline" style={{ textDecoration: "none" }}>
+                    Pedir presupuesto sin elegir ahora
                   </Link>
                 </div>
               </div>
@@ -127,52 +154,15 @@ export default function PlantillasClient({
         </section>
 
         <div style={{ marginTop: 22, color: "var(--muted)", lineHeight: 1.6 }}>
-          <b>Tip:</b> si no te encaja ninguna plantilla, te vas a{" "}
-          <Link href={presupuestoExclusivo} style={{ fontWeight: 900, color: "var(--brand-hover)" }}>
-            diseño exclusivo
+          <b>Tip:</b> si dudas entre plantilla y exclusivo, entra a{" "}
+          <Link href={presupuestoPlantilla} style={{ fontWeight: 900, color: "var(--brand-hover)" }}>
+            presupuesto
           </Link>{" "}
-          y lo hacemos a medida.
+          y verás ambas opciones con precio por alumno y qué incluye cada una.
         </div>
       </div>
     );
   }
-
-  // ====== CARRUSEL CON FLECHAS ======
-  const trackRef = useRef<HTMLDivElement | null>(null);
-  const [canLeft, setCanLeft] = useState(false);
-  const [canRight, setCanRight] = useState(false);
-
-  const refreshArrows = () => {
-    const el = trackRef.current;
-    if (!el) return;
-    const max = el.scrollWidth - el.clientWidth;
-    setCanLeft(el.scrollLeft > 2);
-    setCanRight(el.scrollLeft < max - 2);
-  };
-
-  useEffect(() => {
-    refreshArrows();
-    const el = trackRef.current;
-    if (!el) return;
-
-    const onScroll = () => refreshArrows();
-    const onResize = () => refreshArrows();
-
-    el.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onResize);
-
-    return () => {
-      el.removeEventListener("scroll", onScroll as any);
-      window.removeEventListener("resize", onResize);
-    };
-  }, [items.length]);
-
-  const scrollByCards = (dir: -1 | 1) => {
-    const el = trackRef.current;
-    if (!el) return;
-    const step = Math.max(280, Math.floor(el.clientWidth * 0.85));
-    el.scrollBy({ left: dir * step, behavior: "smooth" });
-  };
 
   // /plantillas-infantil | /plantillas-primaria-secundaria
   return (
@@ -184,35 +174,8 @@ export default function PlantillasClient({
           {items.length} plantillas · {group.label}
         </h2>
 
-        {/* Carrusel */}
-        <div style={carouselShell}>
-          <div style={carouselTopBar}>
-            <button
-              type="button"
-              className="btnOutline"
-              onClick={() => scrollByCards(-1)}
-              disabled={!canLeft}
-              style={{ opacity: canLeft ? 1 : 0.4 }}
-            >
-              ←
-            </button>
-
-            <div style={{ color: "var(--muted)", fontWeight: 800, fontSize: 13 }}>
-              Desliza o usa las flechas
-            </div>
-
-            <button
-              type="button"
-              className="btnOutline"
-              onClick={() => scrollByCards(1)}
-              disabled={!canRight}
-              style={{ opacity: canRight ? 1 : 0.4 }}
-            >
-              →
-            </button>
-          </div>
-
-          <div ref={trackRef} style={carousel} aria-label="Carrusel de plantillas">
+        <div style={carouselWrap}>
+          <div style={carousel} aria-label="Carrusel de plantillas">
             {items.map((p, idx) => (
               <button
                 key={`${p.src}-${idx}`}
@@ -239,65 +202,47 @@ export default function PlantillasClient({
           </div>
         </div>
 
-        {/* Dos bloques iguales (mismo look que selector) */}
-        <div
-          style={{
-            marginTop: 14,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-            gap: 14,
-          }}
-        >
-          <div style={infoCard}>
+        {/* Bloques debajo del carrusel */}
+        <div style={twoCols}>
+          {/* Cómo funciona */}
+          <div className="card">
             <div style={{ fontWeight: 900, marginBottom: 8 }}>Cómo funciona</div>
 
-            <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7, color: "var(--muted)" }}>
+            <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.75, color: "var(--muted)" }}>
               <li>Elige una plantilla del carrusel.</li>
               <li>Pulsa “Elegir esta plantilla” y rellena el presupuesto.</li>
-              <li>Adaptamos nombres, logos, composición y te enviamos el presupuesto final.</li>
+              <li>Adaptamos nombres, logos y composición y te enviamos el presupuesto final.</li>
             </ol>
 
-            <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <Link href={presupuestoPlantilla} className="btnOutline">
-                Ir a presupuesto
-              </Link>
-              <Link href={presupuestoExclusivo} className="btnOutline">
-                Prefiero exclusivo
+            <div style={{ marginTop: 12 }}>
+              <Link href={presupuestoExclusivo} className="btnOutline" style={{ textDecoration: "none" }}>
+                Prefiero diseño exclusivo
               </Link>
             </div>
           </div>
 
-          <div style={infoCard}>
+          {/* Extras opcionales (sin botones) */}
+          <div className="card">
             <div style={{ fontWeight: 900, marginBottom: 8 }}>Extras opcionales</div>
 
-            <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7, color: "var(--muted)" }}>
-              <li>
-                <b>Beca</b> (banda/beca para alumnos y/o profesores)
-              </li>
-              <li>
-                <b>Fotos de recuerdo</b> (pack por alumno)
-              </li>
-              <li>
-                <b>Taza</b> personalizada
-              </li>
-              <li>
-                <b>Sobre reforzado</b> con nombre
-              </li>
-            </ul>
+            <div style={extrasCarousel} aria-label="Carrusel de extras">
+              {EXTRAS.map((x) => (
+                <div key={x.key} style={extraSlide}>
+                  <div style={extraIcon}>{x.icon}</div>
+                  <div style={{ fontWeight: 900, marginTop: 8 }}>{x.title}</div>
+                  <div style={{ color: "var(--muted)", marginTop: 6, lineHeight: 1.45, fontSize: 13 }}>{x.subtitle}</div>
+                </div>
+              ))}
+            </div>
 
-            <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <Link href={presupuestoPlantilla} className="btnPrimary">
-                Pedir presupuesto
-              </Link>
-              <Link href={presupuestoExclusivo} className="btnOutline">
-                Quiero diseño exclusivo
-              </Link>
+            <div style={{ marginTop: 10, color: "var(--muted)", lineHeight: 1.6 }}>
+              Los extras se eligen en el formulario de presupuesto (así no te mareo aquí).
             </div>
           </div>
         </div>
       </section>
 
-      <div style={{ marginTop: 22, color: "var(--muted)", lineHeight: 1.6 }}>
+      <div style={{ marginTop: 18, color: "var(--muted)", lineHeight: 1.6 }}>
         <b>Tip:</b> abre una plantilla, mírala grande, y elige la que más encaje. Cero dramas, cero laberintos.
       </div>
 
@@ -348,9 +293,7 @@ export default function PlantillasClient({
 
             <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
               <Link
-                href={`/presupuesto?tipo=plantilla&plantilla_url=${encodeURIComponent(open.src)}&categoria_plantilla=${encodeURIComponent(
-                  group.label
-                )}`}
+                href={`/presupuesto?tipo=plantilla&tpl=${encodeURIComponent(open.src)}&cat=${encodeURIComponent(group.label)}`}
                 className="btnPrimary"
               >
                 Elegir esta plantilla para el presupuesto
@@ -380,16 +323,9 @@ const catCard: React.CSSProperties = {
   background: "white",
 };
 
-const carouselShell: React.CSSProperties = {
+const carouselWrap: React.CSSProperties = {
+  overflow: "hidden",
   borderRadius: 18,
-};
-
-const carouselTopBar: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 10,
-  marginBottom: 10,
 };
 
 const carousel: React.CSSProperties = {
@@ -415,10 +351,42 @@ const slide: React.CSSProperties = {
   scrollSnapAlign: "start",
 };
 
-const infoCard: React.CSSProperties = {
-  border: "1px solid var(--border)",
-  borderRadius: 16,
-  padding: 14,
-  background: "white",
+const twoCols: React.CSSProperties = {
+  marginTop: 14,
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+  gap: 12,
+  alignItems: "start",
 };
 
+const extrasCarousel: React.CSSProperties = {
+  display: "flex",
+  gap: 10,
+  overflowX: "auto",
+  paddingBottom: 6,
+  WebkitOverflowScrolling: "touch",
+  scrollSnapType: "x mandatory",
+};
+
+const extraSlide: React.CSSProperties = {
+  minWidth: 220,
+  maxWidth: 220,
+  flex: "0 0 auto",
+  border: "1px solid var(--border)",
+  borderRadius: 16,
+  padding: 12,
+  background: "white",
+  scrollSnapAlign: "start",
+};
+
+const extraIcon: React.CSSProperties = {
+  width: 44,
+  height: 44,
+  borderRadius: 14,
+  border: "1px solid var(--border)",
+  background: "var(--brand-soft)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: 20,
+};
