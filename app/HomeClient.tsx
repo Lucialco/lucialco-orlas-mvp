@@ -4,12 +4,15 @@ import { useMemo, useState } from "react";
 
 const WHATSAPP_LINK = "https://wa.me/34606849914";
 
+// ✅ CAMBIA ESTO a tu repo real:
+const ASSET_BASE = "https://cdn.jsdelivr.net/gh/USUARIO/REPO@main/orlas/destacados";
+
 type CarouselItem = {
   kind: "plantilla" | "extra";
   title: string;
   subtitle: string;
   href: string;
-  img: string; // ✅ ruta pública: /plantillas/...  (NUNCA /public/...)
+  img: string;
 };
 
 function clampIndex(i: number, len: number) {
@@ -39,10 +42,6 @@ function ArrowBtn({ onClick, children }: { onClick: () => void; children: string
 }
 
 export default function HomeClient() {
-  // ✅ IMPORTANTE:
-  // - Si el archivo existe en: public/plantillas/plantilla-28.webp
-  //   entonces aquí debe ser: "/plantillas/plantilla-28.webp"
-  // - Si no se ven, es porque NO existe con ese nombre, o está en otra carpeta.
   const items = useMemo<CarouselItem[]>(
     () => [
       {
@@ -50,28 +49,28 @@ export default function HomeClient() {
         title: "Plantilla 28",
         subtitle: "Guardería / Infantil",
         href: "/plantillas",
-        img: "/plantillas/plantilla-28.webp",
+        img: `${ASSET_BASE}/plantilla-28.webp`,
       },
       {
         kind: "plantilla",
         title: "Plantilla 12",
         subtitle: "Infantil",
         href: "/plantillas",
-        img: "/plantillas/plantilla-12.webp",
+        img: `${ASSET_BASE}/plantilla-12.webp`,
       },
       {
         kind: "extra",
         title: "Beca personalizada",
         subtitle: "Un detalle que eleva la orla",
         href: "/presupuesto",
-        img: "/plantillas/extra-beca.webp",
+        img: `${ASSET_BASE}/extra-beca.webp`,
       },
       {
         kind: "extra",
         title: "Taza con foto",
         subtitle: "Regalo perfecto para familias",
         href: "/presupuesto",
-        img: "/plantillas/extra-taza.webp",
+        img: `${ASSET_BASE}/extra-taza.webp`,
       },
     ],
     []
@@ -146,7 +145,7 @@ export default function HomeClient() {
             </div>
           </div>
 
-          {/* ✅ Side card SOLO carrusel (sin 3 botones y sin 15%) */}
+          {/* ✅ SOLO carrusel */}
           <div className="card" style={{ background: "var(--brand-soft)", height: "fit-content" }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
               <div>
@@ -180,11 +179,9 @@ export default function HomeClient() {
                     style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                     loading="lazy"
                     onError={(e) => {
-                      // fallback visual: si falla la ruta, no rompe el layout
                       (e.currentTarget as HTMLImageElement).style.display = "none";
                     }}
                   />
-                  {/* Fallback si la imagen no existe */}
                   <div
                     style={{
                       position: "absolute",
@@ -323,6 +320,5 @@ export default function HomeClient() {
     </div>
   );
 }
-
 
 
