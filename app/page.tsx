@@ -38,10 +38,7 @@ function jsonLd() {
 export default function Page() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd()) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd()) }} />
       <Suspense fallback={<div style={{ padding: 24, fontFamily: "Arial" }}>Cargando…</div>}>
         <HomeClient />
       </Suspense>
