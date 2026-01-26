@@ -64,7 +64,7 @@ const PRICE = {
   plantilla: 12.5,
   exclusiva: 14.5,
 
-  // ✅ NUEVO: digital solo fuera de Madrid/Toledo
+  // ✅ Digital solo fuera de Madrid/Toledo
   digital: 8.5,
   envio_nacional: 15,
 
@@ -115,6 +115,14 @@ function isValidPhoneES(v: string) {
 function isLocalProvincia(p: string) {
   return p === "Madrid" || p === "Toledo";
 }
+function prettyTplName(url: string) {
+  try {
+    const name = decodeURIComponent(url.split("/").pop() || "Plantilla");
+    return name.replace(/\.webp$/i, "").replace(/\.jpe?g$/i, "").replace(/\.png$/i, "");
+  } catch {
+    return "Plantilla";
+  }
+}
 
 export default function PresupuestoClient() {
   const router = useRouter();
@@ -151,28 +159,22 @@ export default function PresupuestoClient() {
 
   // ✅ tipo efectivo según provincia (regla negocio)
   const tipoOrla: TipoOrla = useMemo(() => {
-    if (!provinciaOk) return tipoOrlaFromUrl; // aún no sabemos, no forzamos
+    if (!provinciaOk) return tipoOrlaFromUrl;
     if (esLocal) {
       // En Madrid/Toledo NO mostramos digital
       return tipoOrlaFromUrl === "digital" ? "plantilla" : tipoOrlaFromUrl;
     }
-    // Fuera: SOLO digital
+    // Fuera: modalidad DIGITAL (aunque el usuario venga de plantillas)
     return "digital";
   }, [provinciaOk, esLocal, tipoOrlaFromUrl]);
 
-  // ✅ si el usuario entra por URL a plantilla/exclusiva pero elige provincia fuera → forzamos digital
+  // ✅ fuera => si no viene tipo=digital en URL, lo ponemos por limpieza (pero permitimos tpl igualmente)
   useEffect(() => {
     if (!provinciaOk) return;
     if (!esLocal) {
-      // fuera => digital
-      if (tipoQS !== "digital") {
-        router.replace("/presupuesto?tipo=digital");
-      }
+      if (tipoQS !== "digital") router.replace("/presupuesto?tipo=digital");
     } else {
-      // local => si alguien viene con digital en URL, lo quitamos
-      if (tipoQS === "digital") {
-        router.replace("/presupuesto");
-      }
+      if (tipoQS === "digital") router.replace("/presupuesto");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provinciaOk, esLocal]);
@@ -191,16 +193,19 @@ export default function PresupuestoClient() {
   const [alumnosStr, setAlumnosStr] = useState("");
   const alumnos = useMemo(() => toIntSafe(alumnosStr, 0), [alumnosStr]);
 
+  // ✅ Banner: en DIGITAL, si hay plantilla, la enseñamos
   const banner = useMemo(() => {
-    if (tipoOrla === "plantilla" && tpl) {
-      const name = decodeURIComponent(tpl.split("/").pop() || "Plantilla");
-      return { mode: "plantilla" as const, title: name };
-    }
     if (tipoOrla === "digital") {
-      return { mode: "digital" as const, title: "Orla Digital a Distancia" };
+      return {
+        mode: "digital" as const,
+        title: hasTpl ? `Plantilla elegida (Digital): ${prettyTplName(tpl)}` : "Orla Digital a Distancia",
+      };
+    }
+    if (tipoOrla === "plantilla" && tpl) {
+      return { mode: "plantilla" as const, title: prettyTplName(tpl) };
     }
     return { mode: "exclusiva" as const, title: "Diseño exclusivo" };
-  }, [tipoOrla, tpl]);
+  }, [tipoOrla, tpl, hasTpl]);
 
   const calc = useMemo(() => {
     const unitBase =
@@ -218,7 +223,6 @@ export default function PresupuestoClient() {
       alumnos * (extraSobre ? PRICE.extra_sobre : 0) +
       alumnos * (extraFotosRecuerdo ? PRICE.extra_fotos_recuerdo : 0);
 
-    // ✅ envío solo si digital (y si hay alumnos > 0)
     const envioSinIva = tipoOrla === "digital" && alumnos > 0 ? PRICE.envio_nacional : 0;
 
     const subtotalSinIva = baseSinIva + extrasSinIva + envioSinIva;
@@ -250,12 +254,11 @@ export default function PresupuestoClient() {
 
   const errorClass = (k: FieldKey) => (errors[k] ? "inputError" : "");
 
-  // ✅ FLUJO: desde presupuesto te llevo al selector de etapas
+  // ✅ FLUJO: selector
   const goPlantillasDirect = () => router.push("/plantillas");
   const chooseExclusiva = () => router.replace("/presupuesto?tipo=adhoc");
   const chooseDigital = () => router.replace("/presupuesto?tipo=digital");
 
-  // ✅ Botones iguales (mismo alto/ancho, misma alineación)
   const equalBtn: React.CSSProperties = {
     width: "100%",
     minHeight: 46,
@@ -264,9 +267,7 @@ export default function PresupuestoClient() {
     justifyContent: "center",
   };
 
-  // ✅ bloque superior de elección, ahora depende de provincia
   const ChoiceBlock = () => {
-    // primero provincia
     return (
       <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
         <div style={{ fontWeight: 900, fontSize: 16 }}>Antes, una cosa rápida</div>
@@ -312,7 +313,6 @@ export default function PresupuestoClient() {
                 gap: 14,
               }}
             >
-              {/* PLANTILLA */}
               <div style={choiceCard}>
                 <div>
                   <div style={choiceHeader}>
@@ -333,7 +333,6 @@ export default function PresupuestoClient() {
                 </div>
               </div>
 
-              {/* EXCLUSIVO */}
               <div style={choiceCard}>
                 <div>
                   <div style={choiceHeader}>
@@ -359,8 +358,8 @@ export default function PresupuestoClient() {
           <>
             <div style={{ marginTop: 14, fontWeight: 900 }}>Servicio nacional (modalidad digital)</div>
             <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
-              Para tu provincia trabajamos en <b>modalidad digital</b>: el centro envía las fotos y Lucía realiza el{" "}
-              <b>retoque</b>, la <b>maquetación</b> y el <b>diseño final</b>. Envío nacional incluido en el presupuesto.
+              Para tu provincia trabajamos en <b>modalidad digital</b>: el cole hace las fotos y Lucía realiza el{" "}
+              <b>retoque</b>, la <b>maquetación</b> y el <b>diseño final</b>. (+{PRICE.envio_nacional} € logística)
             </div>
 
             <div
@@ -379,14 +378,16 @@ export default function PresupuestoClient() {
                   </div>
 
                   <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
-                    Retoque profesional + composición + impresión A3. <b>+{PRICE.envio_nacional} €</b> de logística por
-                    pedido.
+                    Puedes elegir plantilla o pedir una composición a medida. El precio unitario es el mismo en digital.
                   </div>
                 </div>
 
-                <div style={{ marginTop: 12, display: "grid" }}>
+                <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+                  <button type="button" className="btnOutline" style={equalBtn} onClick={goPlantillasDirect}>
+                    Ver plantillas (Digital)
+                  </button>
                   <button type="button" className="btnPrimary" style={equalBtn} onClick={chooseDigital}>
-                    Continuar con Orla Digital
+                    Continuar (Digital)
                   </button>
                 </div>
               </div>
@@ -454,19 +455,17 @@ export default function PresupuestoClient() {
         días).
       </p>
 
-      {/* ✅ Selector inicial (ahora depende de provincia) */}
       {needsChoice && <ChoiceBlock />}
 
       {!needsChoice && (
         <>
-          {/* ✅ Provincia obligatoria también aquí (por si entran desde plantilla/exclusiva/digital directo) */}
           <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
             <div style={{ fontWeight: 900 }}>Provincia del centro *</div>
             <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
               {provinciaOk
                 ? esLocal
                   ? "En Madrid/Toledo ofrecemos servicio presencial."
-                  : "En tu provincia trabajamos en modalidad digital."
+                  : "En tu provincia trabajamos en modalidad digital (el cole hace las fotos)."
                 : "Selecciona la provincia para continuar."}
             </div>
 
@@ -499,15 +498,16 @@ export default function PresupuestoClient() {
               {banner.mode === "plantilla"
                 ? "Has elegido una plantilla"
                 : banner.mode === "digital"
-                ? "Has elegido Orla Digital"
+                ? "Has elegido modalidad Digital"
                 : "Has elegido diseño exclusivo"}
             </div>
 
-            {banner.mode === "plantilla" && tpl && (
+            {/* ✅ Plantilla visible tanto en presencial como en digital */}
+            {(banner.mode === "plantilla" || (banner.mode === "digital" && hasTpl && tpl)) && (
               <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
                 <img
                   src={encodeURI(tpl)}
-                  alt={banner.title}
+                  alt={prettyTplName(tpl)}
                   style={{
                     width: 120,
                     height: 78,
@@ -517,22 +517,25 @@ export default function PresupuestoClient() {
                   }}
                 />
                 <div>
-                  <div style={{ fontWeight: 900 }}>{banner.title.replace(/\.webp$/i, "").replace(/\.jpe?g$/i, "")}</div>
+                  <div style={{ fontWeight: 900 }}>{prettyTplName(tpl)}</div>
                   <div style={{ color: "var(--muted)", fontSize: 13 }}>{cat ? `Categoría: ${cat}` : ""}</div>
-                  {esLocal && (
-                    <div style={{ marginTop: 8 }}>
-                      <a href="/plantillas" className="btnOutline">
-                        Cambiar plantilla
-                      </a>
-                    </div>
-                  )}
+                  <div style={{ marginTop: 8 }}>
+                    <a href="/plantillas" className="btnOutline">
+                      Cambiar plantilla
+                    </a>
+                  </div>
                 </div>
               </div>
             )}
 
-            {banner.mode === "digital" && (
+            {banner.mode === "digital" && !hasTpl && (
               <div style={{ marginTop: 8, color: "var(--muted)" }}>
-                Modalidad nacional: el centro envía las fotos y Lucía realiza el retoque, maquetación e impresión. (+{PRICE.envio_nacional} € logística)
+                Si quieres, puedes elegir una plantilla antes de enviar el presupuesto.
+                <div style={{ marginTop: 10 }}>
+                  <a href="/plantillas" className="btnOutline">
+                    Ver plantillas
+                  </a>
+                </div>
               </div>
             )}
 
@@ -549,7 +552,7 @@ export default function PresupuestoClient() {
               {tipoOrla === "digital" ? (
                 <>
                   Retoque fotográfico, maquetación, impresión en alta calidad, formato <b>A3</b>, papel de buen gramaje y{" "}
-                  <b>envío nacional</b>. (Las fotos las envía el centro).
+                  <b>envío nacional</b>. <b>Las fotos las hace el cole</b> y nos las envía.
                 </>
               ) : (
                 <>
@@ -628,9 +631,9 @@ export default function PresupuestoClient() {
                     fotos_recuerdo: extraFotosRecuerdo,
                   },
 
-                  // si no es local, digital manda sin plantilla
-                  plantilla_url: esLocal ? tpl || "" : "",
-                  categoria_plantilla: esLocal ? cat || "" : "",
+                  // ✅ plantilla se envía también en digital (si existe)
+                  plantilla_url: tpl || "",
+                  categoria_plantilla: cat || "",
                 };
 
                 try {
@@ -654,7 +657,6 @@ export default function PresupuestoClient() {
                     setExtraSobre(false);
                     setExtraFotosRecuerdo(false);
                     setAlumnosStr("");
-                    // mantenemos provincia seleccionada (para no volver loco al usuario)
                     setTimeout(() => router.push("/"), 2500);
                   } else {
                     setStatus("error");
@@ -694,15 +696,18 @@ export default function PresupuestoClient() {
                 />
               </Field>
 
-              {/* ✅ Provincia ya arriba, pero la dejamos también aquí por accesibilidad/validación visual */}
               {errors.provincia ? <div style={errInline}>⚠️ {errors.provincia}</div> : null}
 
               <Field label="Ciudad (opcional)">
                 <input name="ciudad" placeholder="Ej: Móstoles / Talavera / Valencia" style={inp} />
               </Field>
 
-              <Field label="Fechas orientativas (opcional)">
-                <input name="fechas" placeholder={tipoOrla === "digital" ? "Ej: Semana del 10–20 marzo" : "Ej: 10–20 marzo"} style={inp} />
+              <Field label={tipoOrla === "digital" ? "Fechas orientativas (opcional)" : "Fechas orientativas para las fotos (opcional)"}>
+                <input
+                  name="fechas"
+                  placeholder={tipoOrla === "digital" ? "Ej: Semana del 10–20 marzo" : "Ej: 10–20 marzo"}
+                  style={inp}
+                />
               </Field>
 
               <Field label="Nombre y apellidos *">
@@ -814,7 +819,6 @@ export default function PresupuestoClient() {
                 </label>
               </div>
 
-              {/* ✅ Resumen cálculo (incluye envío si digital) */}
               <div className="card" style={{ background: "white", border: "1px solid var(--border)" }}>
                 <div style={{ fontWeight: 900, marginBottom: 8 }}>Resumen</div>
                 <div style={{ display: "grid", gap: 6, color: "var(--muted)" }}>
@@ -944,7 +948,6 @@ function pill(active: boolean): React.CSSProperties {
   };
 }
 
-/* ✅ estilos para los bloques del selector */
 const choiceCard: React.CSSProperties = {
   background: "white",
   border: "1px solid var(--border)",
