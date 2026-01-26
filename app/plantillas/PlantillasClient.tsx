@@ -36,31 +36,15 @@ const GROUPS: Group[] = [
 ];
 
 const EXTRAS = [
-  {
-    key: "beca",
-    title: "Beca (banda)",
-    subtitle: "Para alumnos y/o profes",
-    icon: "🎓",
-  },
-  {
-    key: "recuerdo",
-    title: "Fotos de recuerdo",
-    subtitle: "Pack por alumno",
-    icon: "📸",
-  },
-  {
-    key: "taza",
-    title: "Taza personalizada",
-    subtitle: "Con foto / nombre",
-    icon: "☕",
-  },
-  {
-    key: "sobre",
-    title: "Sobre reforzado",
-    subtitle: "Con nombre",
-    icon: "✉️",
-  },
+  { key: "beca", title: "Beca (banda)", subtitle: "Para alumnos y/o profes", icon: "🎓" },
+  { key: "recuerdo", title: "Fotos de recuerdo", subtitle: "Pack por alumno", icon: "📸" },
+  { key: "taza", title: "Taza personalizada", subtitle: "Con foto / nombre", icon: "☕" },
+  { key: "sobre", title: "Sobre reforzado", subtitle: "Con nombre", icon: "✉️" },
 ];
+
+function presupuestoWithTpl(open: Plantilla, groupLabel: string) {
+  return `/presupuesto?tpl=${encodeURIComponent(open.src)}&cat=${encodeURIComponent(groupLabel)}`;
+}
 
 export default function PlantillasClient({
   data,
@@ -88,7 +72,8 @@ export default function PlantillasClient({
 
   const [open, setOpen] = useState<Plantilla | null>(null);
 
-  const presupuestoPlantilla = "/presupuesto?tipo=plantilla";
+  // ✅ NUEVO FLUJO: presupuesto decide por provincia, aquí no forzamos tipo
+  const presupuestoBase = "/presupuesto";
   const presupuestoExclusivo = "/presupuesto?tipo=adhoc";
 
   const header = (
@@ -101,11 +86,12 @@ export default function PlantillasClient({
         Aquí no te obligo a decidir a ciegas: primero eliges <b>la etapa</b> y luego ves las plantillas.
       </p>
       <p style={{ lineHeight: 1.6 }}>
-        Si lo tienes claro desde ya, también puedes pedir <b>diseño exclusivo</b> (Lucía crea una orla única con vuestra temática).
+        Si lo tienes claro desde ya, también puedes pedir <b>diseño exclusivo</b> (Lucía crea una orla única con vuestra
+        temática).
       </p>
 
       <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <Link href={presupuestoPlantilla} className="btnPrimary">
+        <Link href={presupuestoBase} className="btnPrimary">
           Solicitar presupuesto
         </Link>
         <Link href={presupuestoExclusivo} className="btnOutline">
@@ -144,7 +130,7 @@ export default function PlantillasClient({
                     Ver plantillas de {g.label}
                   </Link>
 
-                  <Link href={presupuestoPlantilla} className="btnOutline" style={{ textDecoration: "none" }}>
+                  <Link href={presupuestoBase} className="btnOutline" style={{ textDecoration: "none" }}>
                     Pedir presupuesto sin elegir ahora
                   </Link>
                 </div>
@@ -154,11 +140,11 @@ export default function PlantillasClient({
         </section>
 
         <div style={{ marginTop: 22, color: "var(--muted)", lineHeight: 1.6 }}>
-          <b>Tip:</b> si dudas entre plantilla y exclusivo, entra a{" "}
-          <Link href={presupuestoPlantilla} style={{ fontWeight: 900, color: "var(--brand-hover)" }}>
+          <b>Tip:</b> entra a{" "}
+          <Link href={presupuestoBase} style={{ fontWeight: 900, color: "var(--brand-hover)" }}>
             presupuesto
           </Link>{" "}
-          y verás ambas opciones con precio por alumno y qué incluye cada una.
+          y allí eliges provincia y la modalidad (presencial o digital).
         </div>
       </div>
     );
@@ -211,12 +197,17 @@ export default function PlantillasClient({
             <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.75, color: "var(--muted)" }}>
               <li>Elige una plantilla del carrusel.</li>
               <li>Pulsa “Elegir esta plantilla” y rellena el presupuesto.</li>
+              <li>En presupuesto seleccionas provincia y modalidad (presencial o digital).</li>
               <li>Adaptamos nombres, logos y composición y te enviamos el presupuesto final.</li>
             </ol>
 
-            <div style={{ marginTop: 12 }}>
+            <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
               <Link href={presupuestoExclusivo} className="btnOutline" style={{ textDecoration: "none" }}>
                 Prefiero diseño exclusivo
+              </Link>
+
+              <Link href={presupuestoBase} className="btnOutline" style={{ textDecoration: "none" }}>
+                Ir a presupuesto
               </Link>
             </div>
           </div>
@@ -292,10 +283,7 @@ export default function PlantillasClient({
             </div>
 
             <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <Link
-                href={`/presupuesto?tipo=plantilla&tpl=${encodeURIComponent(open.src)}&cat=${encodeURIComponent(group.label)}`}
-                className="btnPrimary"
-              >
+              <Link href={presupuestoWithTpl(open, group.label)} className="btnPrimary">
                 Elegir esta plantilla para el presupuesto
               </Link>
 
@@ -390,3 +378,4 @@ const extraIcon: React.CSSProperties = {
   justifyContent: "center",
   fontSize: 20,
 };
+
