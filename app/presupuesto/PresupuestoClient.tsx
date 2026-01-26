@@ -6,6 +6,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 const LUCIA_PHONE_E164 = "34606849914";
 const WHATSAPP_LINK = `https://wa.me/${LUCIA_PHONE_E164}`;
 
+// ✅ Persistencia para que al volver de /plantillas no se pierda nada
+const LS_PROVINCIA = "lucialco_orlas_provincia";
+const LS_MODALIDAD = "lucialco_orlas_modalidad";
+
 // ✅ Provincias (select obligatorio)
 const PROVINCIAS = [
   "Álava",
@@ -82,7 +86,7 @@ type EstadoPresupuesto = "informativo" | "interesado";
 
 type ModalidadOrla = "local_plantilla" | "local_exclusiva" | "digital_plantilla" | "digital_exclusiva";
 
-type FieldKey = "contacto" | "email" | "telefono" | "alumnos" | "provincia";
+type FieldKey = "contacto" | "email" | "telefono" | "alumnos" | "provincia" | "plantilla";
 type Errors = Partial<Record<FieldKey, string>>;
 
 function toIntSafe(v: unknown, fallback = 0) {
@@ -148,23 +152,56 @@ export default function PresupuestoClient() {
   const provinciaOk = !!provincia;
 
   // Modalidad elegida (se decide DESPUÉS de provincia)
-  const initialMode: ModalidadOrla | null = useMemo(() => {
-    if (tipoQS === "adhoc") return "local_exclusiva";
-    if (tpl) return "local_plantilla";
-    return null;
-  }, [tipoQS, tpl]);
+  const [modalidad, setModalidad] = useState<ModalidadOrla | null>(null);
 
-  const [modalidad, setModalidad] = useState<ModalidadOrla | null>(initialMode);
+  // ✅ 1) Cargar provincia/modalidad guardadas (para volver desde /plantillas sin perder nada)
+  useEffect(() => {
+    try {
+      const p = localStorage.getItem(LS_PROVINCIA) || "";
+      const m = (localStorage.getItem(LS_MODALIDAD) || "") as ModalidadOrla | "";
+      if (p) setProvincia(p);
+      if (m) setModalidad(m || null);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // ✅ 2) Compat: si viene tipo=adhoc y no hay modalidad aún, ponemos exclusiva (luego provincia manda)
+  useEffect(() => {
+    if (modalidad) return;
+    if (tipoQS === "adhoc") setModalidad("local_exclusiva");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipoQS]);
+
+  // ✅ 3) Si viene con tpl y aún no hay modalidad, asumimos plantilla según provincia (local/digital)
+  useEffect(() => {
+    if (!tpl) return;
+    if (!provinciaOk) return;
+    if (modalidad) return;
+    setModalidad(esLocal ? "local_plantilla" : "digital_plantilla");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tpl, provinciaOk, esLocal]);
+
+  // ✅ 4) Guardar provincia/modalidad cada vez que cambien
+  useEffect(() => {
+    try {
+      if (provincia) localStorage.setItem(LS_PROVINCIA, provincia);
+    } catch {}
+  }, [provincia]);
+
+  useEffect(() => {
+    try {
+      if (modalidad) localStorage.setItem(LS_MODALIDAD, modalidad);
+    } catch {}
+  }, [modalidad]);
 
   // Si cambia provincia, ajusta modalidad para que no se quede incoherente
   useEffect(() => {
     if (!provinciaOk) return;
 
     if (esLocal) {
-      // Si venías en digital, fuera.
       if (modalidad?.startsWith("digital")) setModalidad(null);
     } else {
-      // Si venías en local, fuera.
       if (modalidad?.startsWith("local")) setModalidad(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -253,6 +290,10 @@ export default function PresupuestoClient() {
         return "Digital · Exclusiva";
     }
   }, [modalidad]);
+
+  // ✅ Bloqueo: si es plantilla, obligamos a tener tpl
+  const requierePlantilla = !!modalidad && modalidad.endsWith("plantilla");
+  const faltaPlantilla = requierePlantilla && !tpl;
 
   // --- UI: Paso 1 provincia ---
   const ProvinciaCard = (
@@ -400,12 +441,7 @@ export default function PresupuestoClient() {
                 >
                   Ver plantillas
                 </button>
-                <button
-                  type="button"
-                  className="btnOutline"
-                  style={equalBtn}
-                  onClick={() => setModalidad("digital_plantilla")}
-                >
+                <button type="button" className="btnOutline" style={equalBtn} onClick={() => setModalidad("digital_plantilla")}>
                   Continuar
                 </button>
               </div>
@@ -520,7 +556,7 @@ export default function PresupuestoClient() {
                 </div>
 
                 {/* Plantilla (si aplica) */}
-                {(modalidad.endsWith("plantilla") && tpl) && (
+                {modalidad.endsWith("plantilla") && tpl && (
                   <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
                     <img
                       src={encodeURI(tpl)}
@@ -537,14 +573,10 @@ export default function PresupuestoClient() {
                       <div style={{ fontWeight: 900 }}>{prettyTplName(tpl)}</div>
                       <div style={{ color: "var(--muted)", fontSize: 13 }}>{cat ? `Categoría: ${cat}` : ""}</div>
                       <div style={{ marginTop: 8, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                        <a href="/plantillas" className="btnOutline">
+                        <button type="button" className="btnOutline" onClick={goPlantillas}>
                           Cambiar plantilla
-                        </a>
-                        <button
-                          type="button"
-                          className="btnOutline"
-                          onClick={() => setModalidad(null)}
-                        >
+                        </button>
+                        <button type="button" className="btnOutline" onClick={() => setModalidad(null)}>
                           Cambiar modalidad
                         </button>
                       </div>
@@ -552,16 +584,17 @@ export default function PresupuestoClient() {
                   </div>
                 )}
 
-                {/* Si es plantilla y no hay tpl */}
+                {/* Si es plantilla y no hay tpl (AHORA BLOQUEA) */}
                 {modalidad.endsWith("plantilla") && !tpl && (
                   <div style={{ marginTop: 12 }}>
-                    <div style={{ color: "var(--muted)" }}>
-                      Aún no has elegido plantilla. Puedes verla ahora y volver aquí.
+                    <div style={warnBox}>
+                      ⚠️ Has elegido “plantilla”, pero aún no has seleccionado ninguna. Elige una plantilla para poder enviar el
+                      presupuesto.
                     </div>
                     <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                      <a href="/plantillas" className="btnPrimary">
+                      <button type="button" className="btnPrimary" onClick={goPlantillas}>
                         Ver plantillas
-                      </a>
+                      </button>
                       <button type="button" className="btnOutline" onClick={() => setModalidad(null)}>
                         Cambiar modalidad
                       </button>
@@ -613,16 +646,13 @@ export default function PresupuestoClient() {
                     const nextErrors: Errors = {};
                     if (!provincia) nextErrors.provincia = "Selecciona una provincia.";
                     if (!modalidad) nextErrors.provincia = "Selecciona provincia y modalidad.";
+                    if (modalidad?.endsWith("plantilla") && !tpl) nextErrors.plantilla = "Elige una plantilla antes de enviar.";
                     if (!contacto) nextErrors.contacto = "El nombre es obligatorio.";
                     if (!email) nextErrors.email = "El email es obligatorio.";
                     else if (!isValidEmail(email)) nextErrors.email = "Email no válido.";
                     if (!telefonoRaw) nextErrors.telefono = "El teléfono es obligatorio.";
                     else if (!isValidPhoneES(telefonoRaw)) nextErrors.telefono = "El teléfono debe tener 9 dígitos.";
                     if (alumnosN <= 0) nextErrors.alumnos = "Indica el número de alumnos.";
-
-                    // Si es modalidad plantilla, recomendamos tener plantilla elegida (pero no bloqueamos)
-                    // Si quieres bloquearlo: descomenta
-                    // if (modalidad?.endsWith("plantilla") && !tpl) nextErrors.provincia = "Elige una plantilla antes de enviar.";
 
                     if (Object.keys(nextErrors).length > 0) {
                       setErrors(nextErrors);
@@ -709,6 +739,7 @@ export default function PresupuestoClient() {
                   style={{ display: "grid", gap: 12 }}
                 >
                   {formMsg && <div style={formMsgBox}>{formMsg}</div>}
+                  {errors.plantilla && <div style={warnBox}>⚠️ {errors.plantilla}</div>}
 
                   <Field label="Centro / Colegio (opcional)">
                     <input name="colegio" placeholder="Nombre del centro" style={inp} />
@@ -887,10 +918,14 @@ export default function PresupuestoClient() {
                   <button
                     type="submit"
                     className="btnPrimary"
-                    disabled={status === "sending"}
-                    style={{ opacity: status === "sending" ? 0.75 : 1 }}
+                    disabled={status === "sending" || faltaPlantilla}
+                    style={{ opacity: status === "sending" || faltaPlantilla ? 0.75 : 1 }}
                   >
-                    {status === "sending" ? "Enviando..." : "Enviar presupuesto"}
+                    {status === "sending"
+                      ? "Enviando..."
+                      : faltaPlantilla
+                      ? "Elige una plantilla para continuar"
+                      : "Enviar presupuesto"}
                   </button>
 
                   {status === "sent" && <div style={okBox}>✅ Enviado. Te llegará por email con validez 15 días.</div>}
@@ -933,6 +968,16 @@ const inp: React.CSSProperties = {
 };
 
 const formMsgBox: React.CSSProperties = {
+  padding: 12,
+  borderRadius: 12,
+  background: "#fff7ed",
+  border: "1px solid #fed7aa",
+  color: "#9a3412",
+  fontWeight: 900,
+};
+
+const warnBox: React.CSSProperties = {
+  marginTop: 10,
   padding: 12,
   borderRadius: 12,
   background: "#fff7ed",
@@ -1000,4 +1045,5 @@ const choicePrice: React.CSSProperties = {
   color: "var(--brand-hover)",
   whiteSpace: "nowrap",
 };
+
 
