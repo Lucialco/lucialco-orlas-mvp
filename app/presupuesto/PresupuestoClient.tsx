@@ -235,48 +235,16 @@ export default function PresupuestoClient() {
 
     const lines = [
       extraBeca
-        ? {
-            key: "beca",
-            label: "Beca de graduación personalizada (cole)",
-            unit: PRICE.extra_beca,
-            qty,
-            total: qty * PRICE.extra_beca,
-          }
+        ? { key: "beca", label: "Beca de graduación personalizada (cole)", unit: PRICE.extra_beca, qty, total: qty * PRICE.extra_beca }
         : null,
-      extraTaza
-        ? {
-            key: "taza",
-            label: "Taza con foto",
-            unit: PRICE.extra_taza,
-            qty,
-            total: qty * PRICE.extra_taza,
-          }
-        : null,
-      extraSobre
-        ? {
-            key: "sobre",
-            label: "Sobres reforzados con nombre",
-            unit: PRICE.extra_sobre,
-            qty,
-            total: qty * PRICE.extra_sobre,
-          }
-        : null,
+      extraTaza ? { key: "taza", label: "Taza con foto", unit: PRICE.extra_taza, qty, total: qty * PRICE.extra_taza } : null,
+      extraSobre ? { key: "sobre", label: "Sobres reforzados con nombre", unit: PRICE.extra_sobre, qty, total: qty * PRICE.extra_sobre } : null,
       extraFotosRecuerdo
-        ? {
-            key: "fotos",
-            label: "Fotos de recuerdo",
-            unit: PRICE.extra_fotos_recuerdo,
-            qty,
-            total: qty * PRICE.extra_fotos_recuerdo,
-          }
+        ? { key: "fotos", label: "Fotos de recuerdo", unit: PRICE.extra_fotos_recuerdo, qty, total: qty * PRICE.extra_fotos_recuerdo }
         : null,
     ].filter(Boolean) as Array<{ key: string; label: string; unit: number; qty: number; total: number }>;
 
-    return lines.map((l) => ({
-      ...l,
-      unit: round2(l.unit),
-      total: round2(l.total),
-    }));
+    return lines.map((l) => ({ ...l, unit: round2(l.unit), total: round2(l.total) }));
   }, [extraBeca, extraTaza, extraSobre, extraFotosRecuerdo, alumnos]);
 
   const calc = useMemo(() => {
@@ -440,12 +408,7 @@ export default function PresupuestoClient() {
               </div>
 
               <div style={{ marginTop: 12, display: "grid" }}>
-                <button
-                  type="button"
-                  className="btnPrimary"
-                  style={equalBtn}
-                  onClick={() => setModalidad("local_exclusiva")}
-                >
+                <button type="button" className="btnPrimary" style={equalBtn} onClick={() => setModalidad("local_exclusiva")}>
                   Quiero exclusiva
                 </button>
               </div>
@@ -456,8 +419,8 @@ export default function PresupuestoClient() {
         <>
           <div style={{ fontWeight: 900, fontSize: 16 }}>Elige el tipo de orla (Digital)</div>
           <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
-            En tu provincia trabajamos en <b>modo digital</b>: <b>las fotos las hace el cole</b> y nos las envía. Lucía
-            hace el <b>retoque</b>, la <b>maquetación</b> y la <b>impresión A3</b>.
+            En tu provincia trabajamos en <b>modo digital</b>: <b>las fotos las hace el cole</b> y nos las envía. Lucía hace el{" "}
+            <b>retoque</b>, la <b>maquetación</b> y la <b>impresión A3</b>.
             <br />
             <b>Transporte (aprox.): +{PRICE.envio_nacional} €</b> por pedido.
           </div>
@@ -511,12 +474,7 @@ export default function PresupuestoClient() {
               </div>
 
               <div style={{ marginTop: 12, display: "grid" }}>
-                <button
-                  type="button"
-                  className="btnPrimary"
-                  style={equalBtn}
-                  onClick={() => setModalidad("digital_exclusiva")}
-                >
+                <button type="button" className="btnPrimary" style={equalBtn} onClick={() => setModalidad("digital_exclusiva")}>
                   Quiero exclusiva digital
                 </button>
               </div>
@@ -546,14 +504,14 @@ export default function PresupuestoClient() {
           border-radius: 999px;
           border: 1px solid var(--border);
           display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: 900;
-          font-size: 12px;
+          alignItems: center;
+          justifyContent: center;
+          fontWeight: 900;
+          fontSize: 12px;
           color: var(--brand-hover);
           background: white;
           cursor: help;
-          user-select: none;
+          userSelect: none;
         }
         .tipBox {
           position: absolute;
@@ -610,6 +568,7 @@ export default function PresupuestoClient() {
                 {/* Plantilla (si aplica) */}
                 {modalidad.endsWith("plantilla") && tpl && (
                   <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={encodeURI(tpl)}
                       alt={prettyTplName(tpl)}
@@ -670,7 +629,7 @@ export default function PresupuestoClient() {
                   {isDigital ? (
                     <>
                       Retoque fotográfico, maquetación, impresión en alta calidad, formato <b>A3</b>, papel de buen gramaje y{" "}
-                      <b>envío nacional</b>. <b>Las fotos las hace el cole</b> y says nos las envía.
+                      <b>envío nacional</b>. <b>Las fotos las hace el cole</b> y nos las envía.
                     </>
                   ) : (
                     <>
@@ -793,6 +752,7 @@ export default function PresupuestoClient() {
                   {formMsg && <div style={formMsgBox}>{formMsg}</div>}
                   {errors.plantilla && <div style={warnBox}>⚠️ {errors.plantilla}</div>}
 
+                  {/* ✅ Provincia ya viene de la selección inicial */}
                   <Field label="Provincia">
                     <input value={provincia} readOnly disabled style={{ ...inp, background: "var(--brand-soft)" }} />
                   </Field>
@@ -824,16 +784,13 @@ export default function PresupuestoClient() {
                     />
                   </Field>
 
+                  {/* ✅ sin “(opcional)” */}
                   <Field label="Ciudad">
                     <input name="ciudad" placeholder="Ej: Móstoles / Talavera / Valencia" style={inp} />
                   </Field>
 
                   <Field label={isDigital ? "Fechas orientativas (opcional)" : "Fechas orientativas para las fotos (opcional)"}>
-                    <input
-                      name="fechas"
-                      placeholder={isDigital ? "Ej: Semana del 10–20 marzo" : "Ej: 10–20 marzo"}
-                      style={inp}
-                    />
+                    <input name="fechas" placeholder={isDigital ? "Ej: Semana del 10–20 marzo" : "Ej: 10–20 marzo"} style={inp} />
                   </Field>
 
                   <Field label="Nombre y apellidos *">
@@ -999,11 +956,7 @@ export default function PresupuestoClient() {
                     disabled={status === "sending" || faltaPlantilla}
                     style={{ opacity: status === "sending" || faltaPlantilla ? 0.75 : 1 }}
                   >
-                    {status === "sending"
-                      ? "Enviando..."
-                      : faltaPlantilla
-                      ? "Elige una plantilla para continuar"
-                      : "Enviar presupuesto"}
+                    {status === "sending" ? "Enviando..." : faltaPlantilla ? "Elige una plantilla para continuar" : "Enviar presupuesto"}
                   </button>
 
                   {status === "sent" && <div style={okBox}>✅ Enviado. Te llegará por email con validez 15 días.</div>}
@@ -1123,6 +1076,7 @@ const choicePrice: React.CSSProperties = {
   color: "var(--brand-hover)",
   whiteSpace: "nowrap",
 };
+
 
 
 
