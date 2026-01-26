@@ -9,7 +9,7 @@ type CarouselItem = {
   title: string;
   subtitle: string;
   href: string;
-  img: string; // /public...
+  img: string; // ✅ ruta pública: /plantillas/...  (NUNCA /public/...)
 };
 
 function clampIndex(i: number, len: number) {
@@ -39,8 +39,10 @@ function ArrowBtn({ onClick, children }: { onClick: () => void; children: string
 }
 
 export default function HomeClient() {
-  // ✅ CAMBIA ESTAS RUTAS por las reales que tengas en /public
-  // Si no existen aún, crea estas imágenes (webp) y listo.
+  // ✅ IMPORTANTE:
+  // - Si el archivo existe en: public/plantillas/plantilla-28.webp
+  //   entonces aquí debe ser: "/plantillas/plantilla-28.webp"
+  // - Si no se ven, es porque NO existe con ese nombre, o está en otra carpeta.
   const items = useMemo<CarouselItem[]>(
     () => [
       {
@@ -86,7 +88,6 @@ export default function HomeClient() {
           <div>
             <div className="badge">Orlas escolares · Fotos · Retoque · Diseño</div>
 
-            {/* ✅ H1 ajustado (punto 3) */}
             <h1 style={{ fontSize: 46, lineHeight: 1.05, margin: "14px 0 0" }}>
               <span style={{ background: "var(--brand-soft)", padding: "0 8px", borderRadius: 10, fontWeight: 900 }}>
                 Orlas escolares
@@ -121,7 +122,7 @@ export default function HomeClient() {
             </div>
 
             <p style={{ marginTop: 10, color: "var(--muted)", fontSize: 13 }}>
-              Respuesta rápida · Proceso claro · Señal del 15% para reservar fecha
+              Respuesta rápida · Proceso claro
             </p>
 
             <div style={{ marginTop: 22, display: "grid", gap: 10 }}>
@@ -145,7 +146,7 @@ export default function HomeClient() {
             </div>
           </div>
 
-          {/* ✅ Side card reemplazada por carrusel */}
+          {/* ✅ Side card SOLO carrusel (sin 3 botones y sin 15%) */}
           <div className="card" style={{ background: "var(--brand-soft)", height: "fit-content" }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
               <div>
@@ -162,7 +163,7 @@ export default function HomeClient() {
             </div>
 
             <div className="card" style={{ marginTop: 12, padding: 0, overflow: "hidden" }}>
-              <a href={current?.href || "/plantillas"} style={{ textDecoration: "none" }}>
+              <a href={current?.href || "/plantillas"} style={{ textDecoration: "none", display: "block" }}>
                 <div
                   style={{
                     width: "100%",
@@ -178,7 +179,27 @@ export default function HomeClient() {
                     alt={current?.title || "Destacado"}
                     style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                     loading="lazy"
+                    onError={(e) => {
+                      // fallback visual: si falla la ruta, no rompe el layout
+                      (e.currentTarget as HTMLImageElement).style.display = "none";
+                    }}
                   />
+                  {/* Fallback si la imagen no existe */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "var(--muted)",
+                      fontWeight: 900,
+                      padding: 12,
+                      textAlign: "center",
+                    }}
+                  >
+                    {current?.title}
+                  </div>
                 </div>
 
                 <div style={{ padding: 12 }}>
@@ -202,18 +223,6 @@ export default function HomeClient() {
                       {current?.kind === "extra" ? "Extra" : "Plantilla"}
                     </span>
                   </div>
-
-                  <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-                    <a href="/plantillas" className="btnPrimary">
-                      Ver todas las plantillas
-                    </a>
-                    <a href="/presupuesto?tipo=adhoc" className="btnOutline">
-                      Pedir diseño a medida
-                    </a>
-                    <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer" className="btnOutline">
-                      Habla con nosotras
-                    </a>
-                  </div>
                 </div>
               </a>
             </div>
@@ -236,14 +245,6 @@ export default function HomeClient() {
                 />
               ))}
             </div>
-
-            <div className="card" style={{ marginTop: 16 }}>
-              <div style={{ fontWeight: 900 }}>Reserva con señal del 15%</div>
-              <p style={{ margin: "8px 0 0", color: "var(--muted)", lineHeight: 1.5 }}>
-                Una vez aceptado el presupuesto y abonada la señal, concretamos la fecha de fotos y bloqueamos el hueco
-                en el calendario.
-              </p>
-            </div>
           </div>
         </div>
       </section>
@@ -255,7 +256,7 @@ export default function HomeClient() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
           {[
             { n: "1", t: "Pide presupuesto", d: "Cuéntanos curso, número de alumnos y fechas orientativas." },
-            { n: "2", t: "Reservamos fecha (señal 15%)", d: "Con la señal bloqueamos el día de las fotos en el calendario." },
+            { n: "2", t: "Reservamos fecha", d: "Concretamos el día de las fotos y bloqueamos el hueco en el calendario." },
             { n: "3", t: "Sesión de fotos + diseño", d: "Hacemos las fotos y diseñamos la orla." },
             { n: "4", t: "Entrega y revisión", d: "Te enseñamos el resultado y cerramos la entrega." },
           ].map((s) => (
@@ -286,8 +287,7 @@ export default function HomeClient() {
           <div className="badge">Creatividad humana</div>
           <div style={{ fontWeight: 900, marginTop: 10 }}>Aquí no hay automatismos sin alma.</div>
           <p style={{ margin: "8px 0 0", color: "var(--muted)", lineHeight: 1.55 }}>
-            Cada orla se fotografía, retoca y diseña <b>persona a persona</b>. Atención real y resultados que representan
-            al grupo.
+            Cada orla se fotografía, retoca y diseña <b>persona a persona</b>. Atención real y resultados que representan al grupo.
           </p>
         </div>
 
@@ -323,5 +323,6 @@ export default function HomeClient() {
     </div>
   );
 }
+
 
 
