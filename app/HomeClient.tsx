@@ -4,15 +4,12 @@ import { useMemo, useState } from "react";
 
 const WHATSAPP_LINK = "https://wa.me/34606849914";
 
-// ✅ CAMBIA ESTO a tu repo real:
-const ASSET_BASE = "https://cdn.jsdelivr.net/gh/USUARIO/REPO@main/orlas/destacados";
-
 type CarouselItem = {
   kind: "plantilla" | "extra";
   title: string;
   subtitle: string;
   href: string;
-  img: string;
+  img: string; // desde /public
 };
 
 function clampIndex(i: number, len: number) {
@@ -49,28 +46,35 @@ export default function HomeClient() {
         title: "Plantilla 28",
         subtitle: "Guardería / Infantil",
         href: "/plantillas",
-        img: `${ASSET_BASE}/plantilla-28.webp`,
+        img: "/plantilla-28.webp",
       },
       {
         kind: "plantilla",
         title: "Plantilla 12",
         subtitle: "Infantil",
         href: "/plantillas",
-        img: `${ASSET_BASE}/plantilla-12.webp`,
+        img: "/plantilla-12.webp",
       },
       {
         kind: "extra",
         title: "Beca personalizada",
         subtitle: "Un detalle que eleva la orla",
         href: "/presupuesto",
-        img: `${ASSET_BASE}/extra-beca.webp`,
+        img: "/extra-beca.webp",
       },
       {
         kind: "extra",
         title: "Taza con foto",
         subtitle: "Regalo perfecto para familias",
         href: "/presupuesto",
-        img: `${ASSET_BASE}/extra-taza.webp`,
+        img: "/extra-taza.webp",
+      },
+      {
+        kind: "extra",
+        title: "Fotos de recuerdo",
+        subtitle: "Pack para las familias",
+        href: "/presupuesto",
+        img: "/extra-fotos.webp",
       },
     ],
     []
@@ -78,6 +82,18 @@ export default function HomeClient() {
 
   const [idx, setIdx] = useState(0);
   const current = items[clampIndex(idx, items.length)];
+  const [imgOk, setImgOk] = useState(true);
+
+  // Si cambias de slide, asumimos OK hasta que falle.
+  // (si falla, mostramos fallback con texto)
+  const onPrev = () => {
+    setImgOk(true);
+    setIdx((p) => clampIndex(p - 1, items.length));
+  };
+  const onNext = () => {
+    setImgOk(true);
+    setIdx((p) => clampIndex(p + 1, items.length));
+  };
 
   return (
     <div>
@@ -120,9 +136,7 @@ export default function HomeClient() {
               </a>
             </div>
 
-            <p style={{ marginTop: 10, color: "var(--muted)", fontSize: 13 }}>
-              Respuesta rápida · Proceso claro
-            </p>
+            <p style={{ marginTop: 10, color: "var(--muted)", fontSize: 13 }}>Respuesta rápida · Proceso claro</p>
 
             <div style={{ marginTop: 22, display: "grid", gap: 10 }}>
               {[
@@ -156,8 +170,8 @@ export default function HomeClient() {
               </div>
 
               <div style={{ display: "flex", gap: 8 }}>
-                <ArrowBtn onClick={() => setIdx((p) => clampIndex(p - 1, items.length))}>‹</ArrowBtn>
-                <ArrowBtn onClick={() => setIdx((p) => clampIndex(p + 1, items.length))}>›</ArrowBtn>
+                <ArrowBtn onClick={onPrev}>‹</ArrowBtn>
+                <ArrowBtn onClick={onNext}>›</ArrowBtn>
               </div>
             </div>
 
@@ -176,27 +190,34 @@ export default function HomeClient() {
                   <img
                     src={current?.img}
                     alt={current?.title || "Destacado"}
-                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                    loading="lazy"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display = "none";
-                    }}
-                  />
-                  <div
                     style={{
-                      position: "absolute",
-                      inset: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "var(--muted)",
-                      fontWeight: 900,
-                      padding: 12,
-                      textAlign: "center",
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      display: imgOk ? "block" : "none",
                     }}
-                  >
-                    {current?.title}
-                  </div>
+                    loading="lazy"
+                    onLoad={() => setImgOk(true)}
+                    onError={() => setImgOk(false)}
+                  />
+
+                  {!imgOk && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "var(--muted)",
+                        fontWeight: 900,
+                        padding: 12,
+                        textAlign: "center",
+                      }}
+                    >
+                      {current?.title}
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ padding: 12 }}>
@@ -205,6 +226,7 @@ export default function HomeClient() {
                       <div style={{ fontWeight: 900, color: "var(--text)" }}>{current?.title}</div>
                       <div style={{ marginTop: 4, color: "var(--muted)", lineHeight: 1.45 }}>{current?.subtitle}</div>
                     </div>
+
                     <span
                       style={{
                         border: "1px solid var(--border)",
@@ -230,7 +252,10 @@ export default function HomeClient() {
                   key={i}
                   type="button"
                   aria-label={`Ir al destacado ${i + 1}`}
-                  onClick={() => setIdx(i)}
+                  onClick={() => {
+                    setImgOk(true);
+                    setIdx(i);
+                  }}
                   style={{
                     width: 8,
                     height: 8,
@@ -275,7 +300,9 @@ export default function HomeClient() {
                 {s.n}
               </div>
               <div style={{ fontWeight: 900 }}>{s.t}</div>
-              <div style={{ color: "var(--muted)", marginTop: 6, lineHeight: 1.45 }}>{s.d}</div>
+              <div style={{ color: "var(--muted)", marginTop: 6, lineHeight: 1.45 }}>
+                {s.d}
+              </div>
             </div>
           ))}
         </div>
@@ -320,5 +347,6 @@ export default function HomeClient() {
     </div>
   );
 }
+
 
 
