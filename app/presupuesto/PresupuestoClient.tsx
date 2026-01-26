@@ -407,7 +407,7 @@ export default function PresupuestoClient() {
             En tu provincia trabajamos en <b>modo digital</b>: <b>las fotos las hace el cole</b> y nos las envía. Lucía
             hace el <b>retoque</b>, la <b>maquetación</b> y la <b>impresión A3</b>.
             <br />
-            <b>Logística nacional: +{PRICE.envio_nacional} €</b> por pedido.
+            <b>Transporte (aprox.): +{PRICE.envio_nacional} €</b> por pedido.
           </div>
 
           <div
@@ -550,7 +550,7 @@ export default function PresupuestoClient() {
                   {isDigital && (
                     <>
                       <br />
-                      <b>Digital:</b> las fotos las hace el cole y nos las envía. (+{PRICE.envio_nacional} € logística)
+                      <b>Digital:</b> las fotos las hace el cole y nos las envía. (+{PRICE.envio_nacional} € transporte aprox.)
                     </>
                   )}
                 </div>
@@ -689,7 +689,7 @@ export default function PresupuestoClient() {
                       alumnos: alumnosN,
                       precios: {
                         unitario: calc.unitBase,
-                        envio: calc.envioSinIva,
+                        transporte_aprox: calc.envioSinIva,
                         iva_pct: calc.ivaPct,
                         subtotal_sin_iva: calc.subtotalSinIva,
                         total_con_iva: calc.totalConIva,
@@ -900,7 +900,7 @@ export default function PresupuestoClient() {
                       </div>
                       {calc.envioSinIva > 0 && (
                         <div>
-                          Logística nacional: <b style={{ color: "var(--text)" }}>{calc.envioSinIva.toFixed(2)} €</b> / pedido
+                          Transporte (aprox.): <b style={{ color: "var(--text)" }}>{Math.round(calc.envioSinIva)} €</b> / pedido
                         </div>
                       )}
                       <div>
