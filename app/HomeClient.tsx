@@ -1,8 +1,83 @@
 "use client";
 
+import { useMemo, useState } from "react";
+
 const WHATSAPP_LINK = "https://wa.me/34606849914";
 
+type CarouselItem = {
+  kind: "plantilla" | "extra";
+  title: string;
+  subtitle: string;
+  href: string;
+  img: string; // /public...
+};
+
+function clampIndex(i: number, len: number) {
+  if (len <= 0) return 0;
+  return ((i % len) + len) % len;
+}
+
+function ArrowBtn({ onClick, children }: { onClick: () => void; children: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={children === "‹" ? "Anterior" : "Siguiente"}
+      style={{
+        width: 38,
+        height: 38,
+        borderRadius: 12,
+        border: "1px solid var(--border)",
+        background: "white",
+        fontWeight: 900,
+        cursor: "pointer",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function HomeClient() {
+  // ✅ CAMBIA ESTAS RUTAS por las reales que tengas en /public
+  // Si no existen aún, crea estas imágenes (webp) y listo.
+  const items = useMemo<CarouselItem[]>(
+    () => [
+      {
+        kind: "plantilla",
+        title: "Plantilla 28",
+        subtitle: "Guardería / Infantil",
+        href: "/plantillas",
+        img: "/plantillas/plantilla-28.webp",
+      },
+      {
+        kind: "plantilla",
+        title: "Plantilla 12",
+        subtitle: "Infantil",
+        href: "/plantillas",
+        img: "/plantillas/plantilla-12.webp",
+      },
+      {
+        kind: "extra",
+        title: "Beca personalizada",
+        subtitle: "Un detalle que eleva la orla",
+        href: "/presupuesto",
+        img: "/plantillas/extra-beca.webp",
+      },
+      {
+        kind: "extra",
+        title: "Taza con foto",
+        subtitle: "Regalo perfecto para familias",
+        href: "/presupuesto",
+        img: "/plantillas/extra-taza.webp",
+      },
+    ],
+    []
+  );
+
+  const [idx, setIdx] = useState(0);
+  const current = items[clampIndex(idx, items.length)];
+
   return (
     <div>
       {/* Hero */}
@@ -70,28 +145,96 @@ export default function HomeClient() {
             </div>
           </div>
 
-          {/* ✅ Side card: cambiaremos esto por carrusel (punto 1) en el siguiente bloque */}
+          {/* ✅ Side card reemplazada por carrusel */}
           <div className="card" style={{ background: "var(--brand-soft)", height: "fit-content" }}>
-            <div style={{ fontWeight: 900, fontSize: 16 }}>Plantillas destacadas</div>
-            <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.55 }}>
-              Algunas de las más vistas. Si quieres, mira el catálogo completo.
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+              <div>
+                <div style={{ fontWeight: 900, fontSize: 16 }}>Destacados</div>
+                <div style={{ marginTop: 6, color: "var(--muted)", lineHeight: 1.55 }}>
+                  Plantillas y extras más elegidos.
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 8 }}>
+                <ArrowBtn onClick={() => setIdx((p) => clampIndex(p - 1, items.length))}>‹</ArrowBtn>
+                <ArrowBtn onClick={() => setIdx((p) => clampIndex(p + 1, items.length))}>›</ArrowBtn>
+              </div>
             </div>
 
-            <div className="card" style={{ marginTop: 12 }}>
-              <div style={{ color: "var(--muted)", lineHeight: 1.55 }}>
-                (Carrusel en el siguiente paso)
-              </div>
-              <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-                <a href="/plantillas" className="btnPrimary">
-                  Ver todas las plantillas
-                </a>
-                <a href="/presupuesto?tipo=adhoc" className="btnOutline">
-                  Pedir diseño a medida
-                </a>
-                <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer" className="btnOutline">
-                  Habla con nosotras
-                </a>
-              </div>
+            <div className="card" style={{ marginTop: 12, padding: 0, overflow: "hidden" }}>
+              <a href={current?.href || "/plantillas"} style={{ textDecoration: "none" }}>
+                <div
+                  style={{
+                    width: "100%",
+                    aspectRatio: "16/10",
+                    background: "white",
+                    position: "relative",
+                    borderBottom: "1px solid var(--border)",
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={current?.img}
+                    alt={current?.title || "Destacado"}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    loading="lazy"
+                  />
+                </div>
+
+                <div style={{ padding: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 900, color: "var(--text)" }}>{current?.title}</div>
+                      <div style={{ marginTop: 4, color: "var(--muted)", lineHeight: 1.45 }}>{current?.subtitle}</div>
+                    </div>
+                    <span
+                      style={{
+                        border: "1px solid var(--border)",
+                        background: "white",
+                        borderRadius: 999,
+                        padding: "6px 10px",
+                        fontSize: 12,
+                        fontWeight: 900,
+                        color: "var(--brand-hover)",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {current?.kind === "extra" ? "Extra" : "Plantilla"}
+                    </span>
+                  </div>
+
+                  <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+                    <a href="/plantillas" className="btnPrimary">
+                      Ver todas las plantillas
+                    </a>
+                    <a href="/presupuesto?tipo=adhoc" className="btnOutline">
+                      Pedir diseño a medida
+                    </a>
+                    <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer" className="btnOutline">
+                      Habla con nosotras
+                    </a>
+                  </div>
+                </div>
+              </a>
+            </div>
+
+            <div style={{ marginTop: 12, display: "flex", justifyContent: "center", gap: 6 }}>
+              {items.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  aria-label={`Ir al destacado ${i + 1}`}
+                  onClick={() => setIdx(i)}
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 999,
+                    border: "none",
+                    background: i === clampIndex(idx, items.length) ? "var(--brand)" : "rgba(0,0,0,0.18)",
+                    cursor: "pointer",
+                  }}
+                />
+              ))}
             </div>
 
             <div className="card" style={{ marginTop: 16 }}>
@@ -180,4 +323,5 @@ export default function HomeClient() {
     </div>
   );
 }
+
 
