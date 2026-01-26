@@ -130,6 +130,9 @@ function prettyTplName(url: string) {
     return "Plantilla";
   }
 }
+function eur(n: number) {
+  return `${n.toFixed(2)} €`;
+}
 
 export default function PresupuestoClient() {
   const router = useRouter();
@@ -226,6 +229,55 @@ export default function PresupuestoClient() {
     if (!modalidad) return 0;
     return PRICE[modalidad];
   }, [modalidad]);
+
+  const extrasDetalle = useMemo(() => {
+    const qty = alumnos > 0 ? alumnos : 0;
+
+    const lines = [
+      extraBeca
+        ? {
+            key: "beca",
+            label: "Beca de graduación personalizada (cole)",
+            unit: PRICE.extra_beca,
+            qty,
+            total: qty * PRICE.extra_beca,
+          }
+        : null,
+      extraTaza
+        ? {
+            key: "taza",
+            label: "Taza con foto",
+            unit: PRICE.extra_taza,
+            qty,
+            total: qty * PRICE.extra_taza,
+          }
+        : null,
+      extraSobre
+        ? {
+            key: "sobre",
+            label: "Sobres reforzados con nombre",
+            unit: PRICE.extra_sobre,
+            qty,
+            total: qty * PRICE.extra_sobre,
+          }
+        : null,
+      extraFotosRecuerdo
+        ? {
+            key: "fotos",
+            label: "Fotos de recuerdo",
+            unit: PRICE.extra_fotos_recuerdo,
+            qty,
+            total: qty * PRICE.extra_fotos_recuerdo,
+          }
+        : null,
+    ].filter(Boolean) as Array<{ key: string; label: string; unit: number; qty: number; total: number }>;
+
+    return lines.map((l) => ({
+      ...l,
+      unit: round2(l.unit),
+      total: round2(l.total),
+    }));
+  }, [extraBeca, extraTaza, extraSobre, extraFotosRecuerdo, alumnos]);
 
   const calc = useMemo(() => {
     const baseSinIva = alumnos * unitPrice;
@@ -618,7 +670,7 @@ export default function PresupuestoClient() {
                   {isDigital ? (
                     <>
                       Retoque fotográfico, maquetación, impresión en alta calidad, formato <b>A3</b>, papel de buen gramaje y{" "}
-                      <b>envío nacional</b>. <b>Las fotos las hace el cole</b> y nos las envía.
+                      <b>envío nacional</b>. <b>Las fotos las hace el cole</b> y says nos las envía.
                     </>
                   ) : (
                     <>
@@ -741,6 +793,10 @@ export default function PresupuestoClient() {
                   {formMsg && <div style={formMsgBox}>{formMsg}</div>}
                   {errors.plantilla && <div style={warnBox}>⚠️ {errors.plantilla}</div>}
 
+                  <Field label="Provincia">
+                    <input value={provincia} readOnly disabled style={{ ...inp, background: "var(--brand-soft)" }} />
+                  </Field>
+
                   <Field label="Centro / Colegio (opcional)">
                     <input name="colegio" placeholder="Nombre del centro" style={inp} />
                   </Field>
@@ -768,7 +824,7 @@ export default function PresupuestoClient() {
                     />
                   </Field>
 
-                  <Field label="Ciudad (opcional)">
+                  <Field label="Ciudad">
                     <input name="ciudad" placeholder="Ej: Móstoles / Talavera / Valencia" style={inp} />
                   </Field>
 
@@ -896,21 +952,43 @@ export default function PresupuestoClient() {
                         Modalidad: <b style={{ color: "var(--text)" }}>{modalidadLabel}</b>
                       </div>
                       <div>
-                        Precio unitario: <b style={{ color: "var(--text)" }}>{calc.unitBase.toFixed(2)} €</b> / alumno
+                        Precio unitario: <b style={{ color: "var(--text)" }}>{eur(calc.unitBase)}</b> / alumno
                       </div>
+
+                      {extrasDetalle.length > 0 && (
+                        <div style={{ marginTop: 6 }}>
+                          <div style={{ fontWeight: 900, color: "var(--text)", marginBottom: 6 }}>Extras</div>
+                          <div style={{ display: "grid", gap: 6 }}>
+                            {extrasDetalle.map((x) => (
+                              <div key={x.key} style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                                <div>
+                                  <span style={{ color: "var(--text)", fontWeight: 800 }}>{x.label}</span>
+                                  <span>
+                                    {" "}
+                                    — {eur(x.unit)} / alumno · {x.qty} alumno{x.qty === 1 ? "" : "s"}
+                                  </span>
+                                </div>
+                                <b style={{ color: "var(--text)" }}>{eur(x.total)}</b>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {calc.envioSinIva > 0 && (
-                        <div>
+                        <div style={{ marginTop: extrasDetalle.length > 0 ? 6 : 0 }}>
                           Transporte (aprox.): <b style={{ color: "var(--text)" }}>{Math.round(calc.envioSinIva)} €</b> / pedido
                         </div>
                       )}
+
                       <div>
-                        Subtotal (sin IVA): <b style={{ color: "var(--text)" }}>{calc.subtotalSinIva.toFixed(2)} €</b>
+                        Subtotal (sin IVA): <b style={{ color: "var(--text)" }}>{eur(calc.subtotalSinIva)}</b>
                       </div>
                       <div>
-                        IVA ({calc.ivaPct}%): <b style={{ color: "var(--text)" }}>{calc.iva.toFixed(2)} €</b>
+                        IVA ({calc.ivaPct}%): <b style={{ color: "var(--text)" }}>{eur(calc.iva)}</b>
                       </div>
                       <div style={{ fontSize: 16 }}>
-                        Total: <b style={{ color: "var(--brand-hover)" }}>{calc.totalConIva.toFixed(2)} €</b>
+                        Total: <b style={{ color: "var(--brand-hover)" }}>{eur(calc.totalConIva)}</b>
                       </div>
                     </div>
                   </div>
@@ -1045,5 +1123,6 @@ const choicePrice: React.CSSProperties = {
   color: "var(--brand-hover)",
   whiteSpace: "nowrap",
 };
+
 
 
