@@ -1,26 +1,85 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 const LUCIA_PHONE_E164 = "34606849914";
 const WHATSAPP_LINK = `https://wa.me/${LUCIA_PHONE_E164}`;
 
+// ✅ Provincias (select obligatorio)
+const PROVINCIAS = [
+  "Álava",
+  "Albacete",
+  "Alicante",
+  "Almería",
+  "Asturias",
+  "Ávila",
+  "Badajoz",
+  "Barcelona",
+  "Burgos",
+  "Cáceres",
+  "Cádiz",
+  "Cantabria",
+  "Castellón",
+  "Ciudad Real",
+  "Córdoba",
+  "Cuenca",
+  "Gerona",
+  "Granada",
+  "Guadalajara",
+  "Guipúzcoa",
+  "Huelva",
+  "Huesca",
+  "Islas Baleares",
+  "Jaén",
+  "La Coruña",
+  "La Rioja",
+  "Las Palmas",
+  "León",
+  "Lérida",
+  "Lugo",
+  "Madrid",
+  "Málaga",
+  "Murcia",
+  "Navarra",
+  "Orense",
+  "Palencia",
+  "Pontevedra",
+  "Salamanca",
+  "Santa Cruz de Tenerife",
+  "Segovia",
+  "Sevilla",
+  "Soria",
+  "Tarragona",
+  "Teruel",
+  "Toledo",
+  "Valencia",
+  "Valladolid",
+  "Vizcaya",
+  "Zamora",
+  "Zaragoza",
+] as const;
+
 const PRICE = {
   plantilla: 12.5,
   exclusiva: 14.5,
+
+  // ✅ NUEVO: digital solo fuera de Madrid/Toledo
+  digital: 8.5,
+  envio_nacional: 15,
+
   extra_beca: 8,
   extra_taza: 5,
   extra_sobre: 3,
-  extra_fotos_recuerdo: 4.5, // ✅ NUEVO (por alumno)
+  extra_fotos_recuerdo: 4.5, // ✅ (por alumno)
   iva_pct: 21,
 } as const;
 
 type Status = "idle" | "sending" | "sent" | "error";
 type EstadoPresupuesto = "informativo" | "interesado";
-type TipoOrla = "plantilla" | "exclusiva";
+type TipoOrla = "plantilla" | "exclusiva" | "digital";
 
-type FieldKey = "contacto" | "email" | "telefono" | "alumnos";
+type FieldKey = "contacto" | "email" | "telefono" | "alumnos" | "provincia";
 type Errors = Partial<Record<FieldKey, string>>;
 
 function toIntSafe(v: unknown, fallback = 0) {
@@ -53,12 +112,15 @@ function isValidPhoneES(v: string) {
   if (digits.length === 11 && digits.startsWith("34")) return true;
   return false;
 }
+function isLocalProvincia(p: string) {
+  return p === "Madrid" || p === "Toledo";
+}
 
 export default function PresupuestoClient() {
   const router = useRouter();
   const sp = useSearchParams();
 
-  const tipoQS = sp.get("tipo") || "";
+  const tipoQS = (sp.get("tipo") || "").toLowerCase(); // "plantilla" | "adhoc" | "digital"
   const tplOld = sp.get("tpl") || "";
   const catOld = sp.get("cat") || "";
   const tplNew = sp.get("plantilla_url") || "";
@@ -68,17 +130,52 @@ export default function PresupuestoClient() {
   const cat = catOld || catNew;
 
   const hasTpl = !!tpl;
-  const hasTipo = tipoQS === "plantilla" || tipoQS === "adhoc";
+  const hasTipo = tipoQS === "plantilla" || tipoQS === "adhoc" || tipoQS === "digital";
 
-  // ✅ si viene plantilla, es plantilla. si viene tipo=adhoc, es exclusiva. si no viene nada, mostramos selector.
+  // ✅ si viene plantilla, es plantilla. si viene tipo=adhoc, es exclusiva. si viene tipo=digital, digital. si no viene nada, mostramos selector.
   const needsChoice = useMemo(() => !hasTipo && !hasTpl, [hasTipo, hasTpl]);
 
-  const tipoOrla: TipoOrla = useMemo(() => {
+  const tipoOrlaFromUrl: TipoOrla = useMemo(() => {
     if (tipoQS === "plantilla") return "plantilla";
     if (tipoQS === "adhoc") return "exclusiva";
+    if (tipoQS === "digital") return "digital";
     if (hasTpl) return "plantilla";
     return "plantilla";
   }, [tipoQS, hasTpl]);
+
+  // ✅ provincia obligatoria
+  const [provincia, setProvincia] = useState<string>("");
+
+  const esLocal = useMemo(() => isLocalProvincia(provincia), [provincia]);
+  const provinciaOk = !!provincia;
+
+  // ✅ tipo efectivo según provincia (regla negocio)
+  const tipoOrla: TipoOrla = useMemo(() => {
+    if (!provinciaOk) return tipoOrlaFromUrl; // aún no sabemos, no forzamos
+    if (esLocal) {
+      // En Madrid/Toledo NO mostramos digital
+      return tipoOrlaFromUrl === "digital" ? "plantilla" : tipoOrlaFromUrl;
+    }
+    // Fuera: SOLO digital
+    return "digital";
+  }, [provinciaOk, esLocal, tipoOrlaFromUrl]);
+
+  // ✅ si el usuario entra por URL a plantilla/exclusiva pero elige provincia fuera → forzamos digital
+  useEffect(() => {
+    if (!provinciaOk) return;
+    if (!esLocal) {
+      // fuera => digital
+      if (tipoQS !== "digital") {
+        router.replace("/presupuesto?tipo=digital");
+      }
+    } else {
+      // local => si alguien viene con digital en URL, lo quitamos
+      if (tipoQS === "digital") {
+        router.replace("/presupuesto");
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [provinciaOk, esLocal]);
 
   const [status, setStatus] = useState<Status>("idle");
   const [estado, setEstado] = useState<EstadoPresupuesto>("informativo");
@@ -89,7 +186,7 @@ export default function PresupuestoClient() {
   const [extraBeca, setExtraBeca] = useState(false);
   const [extraTaza, setExtraTaza] = useState(false);
   const [extraSobre, setExtraSobre] = useState(false);
-  const [extraFotosRecuerdo, setExtraFotosRecuerdo] = useState(false); // ✅ NUEVO
+  const [extraFotosRecuerdo, setExtraFotosRecuerdo] = useState(false);
 
   const [alumnosStr, setAlumnosStr] = useState("");
   const alumnos = useMemo(() => toIntSafe(alumnosStr, 0), [alumnosStr]);
@@ -99,11 +196,20 @@ export default function PresupuestoClient() {
       const name = decodeURIComponent(tpl.split("/").pop() || "Plantilla");
       return { mode: "plantilla" as const, title: name };
     }
+    if (tipoOrla === "digital") {
+      return { mode: "digital" as const, title: "Orla Digital a Distancia" };
+    }
     return { mode: "exclusiva" as const, title: "Diseño exclusivo" };
   }, [tipoOrla, tpl]);
 
   const calc = useMemo(() => {
-    const unitBase = tipoOrla === "plantilla" ? PRICE.plantilla : PRICE.exclusiva;
+    const unitBase =
+      tipoOrla === "plantilla"
+        ? PRICE.plantilla
+        : tipoOrla === "exclusiva"
+        ? PRICE.exclusiva
+        : PRICE.digital;
+
     const baseSinIva = alumnos * unitBase;
 
     const extrasSinIva =
@@ -112,7 +218,10 @@ export default function PresupuestoClient() {
       alumnos * (extraSobre ? PRICE.extra_sobre : 0) +
       alumnos * (extraFotosRecuerdo ? PRICE.extra_fotos_recuerdo : 0);
 
-    const subtotalSinIva = baseSinIva + extrasSinIva;
+    // ✅ envío solo si digital (y si hay alumnos > 0)
+    const envioSinIva = tipoOrla === "digital" && alumnos > 0 ? PRICE.envio_nacional : 0;
+
+    const subtotalSinIva = baseSinIva + extrasSinIva + envioSinIva;
     const iva = subtotalSinIva * (PRICE.iva_pct / 100);
     const totalConIva = subtotalSinIva + iva;
 
@@ -120,6 +229,7 @@ export default function PresupuestoClient() {
       unitBase: round2(unitBase),
       baseSinIva: round2(baseSinIva),
       extrasSinIva: round2(extrasSinIva),
+      envioSinIva: round2(envioSinIva),
       subtotalSinIva: round2(subtotalSinIva),
       ivaPct: PRICE.iva_pct,
       iva: round2(iva),
@@ -143,6 +253,7 @@ export default function PresupuestoClient() {
   // ✅ FLUJO: desde presupuesto te llevo al selector de etapas
   const goPlantillasDirect = () => router.push("/plantillas");
   const chooseExclusiva = () => router.replace("/presupuesto?tipo=adhoc");
+  const chooseDigital = () => router.replace("/presupuesto?tipo=digital");
 
   // ✅ Botones iguales (mismo alto/ancho, misma alineación)
   const equalBtn: React.CSSProperties = {
@@ -151,6 +262,139 @@ export default function PresupuestoClient() {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
+  };
+
+  // ✅ bloque superior de elección, ahora depende de provincia
+  const ChoiceBlock = () => {
+    // primero provincia
+    return (
+      <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
+        <div style={{ fontWeight: 900, fontSize: 16 }}>Antes, una cosa rápida</div>
+        <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
+          Indica la provincia del centro para mostrarte las opciones disponibles.
+        </div>
+
+        <div style={{ marginTop: 12 }}>
+          <Field label="Provincia *">
+            <select
+              name="provincia"
+              required
+              value={provincia}
+              onChange={(e) => {
+                setProvincia(e.target.value);
+                clearError("provincia");
+              }}
+              style={{ ...inp, background: "white" }}
+              className={errorClass("provincia")}
+            >
+              <option value="">Selecciona provincia…</option>
+              {PROVINCIAS.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+
+        {!provinciaOk ? null : esLocal ? (
+          <>
+            <div style={{ marginTop: 14, fontWeight: 900 }}>Opciones presenciales (Madrid/Toledo)</div>
+            <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
+              En tu zona hacemos <b>fotos in situ</b>, retoque, maquetación e impresión A3 con entrega en mano.
+            </div>
+
+            <div
+              style={{
+                marginTop: 14,
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+                gap: 14,
+              }}
+            >
+              {/* PLANTILLA */}
+              <div style={choiceCard}>
+                <div>
+                  <div style={choiceHeader}>
+                    <div style={{ fontWeight: 900, fontSize: 16 }}>Orla desde plantilla</div>
+                    <div style={choicePrice}>{PRICE.plantilla.toFixed(2)} € / niñ@</div>
+                  </div>
+
+                  <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
+                    Eliges una plantilla que ya tenemos y la adaptamos a tu centro (nombres, logos, composición y revisión
+                    final).
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+                  <button type="button" className="btnPrimary" style={equalBtn} onClick={goPlantillasDirect}>
+                    Ver plantillas
+                  </button>
+                </div>
+              </div>
+
+              {/* EXCLUSIVO */}
+              <div style={choiceCard}>
+                <div>
+                  <div style={choiceHeader}>
+                    <div style={{ fontWeight: 900, fontSize: 16 }}>Orla con diseño exclusivo</div>
+                    <div style={choicePrice}>{PRICE.exclusiva.toFixed(2)} € / niñ@</div>
+                  </div>
+
+                  <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
+                    Nos dices temática/estilo y diseñamos una orla única desde cero. Ideal si quieres algo realmente
+                    personalizado.
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 12, display: "grid" }}>
+                  <button type="button" className="btnPrimary" style={equalBtn} onClick={chooseExclusiva}>
+                    Quiero diseño exclusivo
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ marginTop: 14, fontWeight: 900 }}>Servicio nacional (modalidad digital)</div>
+            <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
+              Para tu provincia trabajamos en <b>modalidad digital</b>: el centro envía las fotos y Lucía realiza el{" "}
+              <b>retoque</b>, la <b>maquetación</b> y el <b>diseño final</b>. Envío nacional incluido en el presupuesto.
+            </div>
+
+            <div
+              style={{
+                marginTop: 14,
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+                gap: 14,
+              }}
+            >
+              <div style={choiceCard}>
+                <div>
+                  <div style={choiceHeader}>
+                    <div style={{ fontWeight: 900, fontSize: 16 }}>Orla Digital a Distancia</div>
+                    <div style={choicePrice}>{PRICE.digital.toFixed(2)} € / niñ@</div>
+                  </div>
+
+                  <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
+                    Retoque profesional + composición + impresión A3. <b>+{PRICE.envio_nacional} €</b> de logística por
+                    pedido.
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 12, display: "grid" }}>
+                  <button type="button" className="btnPrimary" style={equalBtn} onClick={chooseDigital}>
+                    Continuar con Orla Digital
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -206,72 +450,57 @@ export default function PresupuestoClient() {
 
       <h1 style={{ marginTop: 14 }}>Solicitar presupuesto de orla 🎓</h1>
       <p style={{ color: "var(--muted)", lineHeight: 1.5 }}>
-        Elige el tipo de orla, añade extras si quieres y te enviamos el presupuesto por email (validez 15 días).
+        Indica la provincia, el número de alumnos y extras si quieres. Te enviamos el presupuesto por email (validez 15
+        días).
       </p>
 
-      {needsChoice && (
-        <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
-          <div style={{ fontWeight: 900, fontSize: 16 }}>Elige el punto de partida</div>
-          <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
-            En ambos casos nos ocupamos de fotos, retoque, maquetación e impresión A3 en alta calidad.
-          </div>
-
-          <div
-            style={{
-              marginTop: 14,
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
-              gap: 14,
-            }}
-          >
-            {/* PLANTILLA */}
-            <div style={choiceCard}>
-              <div>
-                <div style={choiceHeader}>
-                  <div style={{ fontWeight: 900, fontSize: 16 }}>Orla desde plantilla</div>
-                  <div style={choicePrice}>{PRICE.plantilla.toFixed(2)} € / niñ@</div>
-                </div>
-
-                <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
-                  Eliges una plantilla que ya tenemos y la adaptamos a tu centro (nombres, logos, composición y revisión final).
-                </div>
-              </div>
-
-              <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
-                <button type="button" className="btnPrimary" style={equalBtn} onClick={goPlantillasDirect}>
-                  Ver plantillas
-                </button>
-              </div>
-            </div>
-
-            {/* EXCLUSIVO */}
-            <div style={choiceCard}>
-              <div>
-                <div style={choiceHeader}>
-                  <div style={{ fontWeight: 900, fontSize: 16 }}>Orla con diseño exclusivo</div>
-                  <div style={choicePrice}>{PRICE.exclusiva.toFixed(2)} € / niñ@</div>
-                </div>
-
-                <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
-                  Nos dices temática/estilo y diseñamos una orla única desde cero. Ideal si quieres algo realmente personalizado.
-                </div>
-              </div>
-
-              <div style={{ marginTop: 12, display: "grid" }}>
-                <button type="button" className="btnPrimary" style={equalBtn} onClick={chooseExclusiva}>
-                  Quiero diseño exclusivo
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ✅ Selector inicial (ahora depende de provincia) */}
+      {needsChoice && <ChoiceBlock />}
 
       {!needsChoice && (
         <>
+          {/* ✅ Provincia obligatoria también aquí (por si entran desde plantilla/exclusiva/digital directo) */}
+          <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
+            <div style={{ fontWeight: 900 }}>Provincia del centro *</div>
+            <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
+              {provinciaOk
+                ? esLocal
+                  ? "En Madrid/Toledo ofrecemos servicio presencial."
+                  : "En tu provincia trabajamos en modalidad digital."
+                : "Selecciona la provincia para continuar."}
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <Field label="Provincia *">
+                <select
+                  name="provincia"
+                  required
+                  value={provincia}
+                  onChange={(e) => {
+                    setProvincia(e.target.value);
+                    clearError("provincia");
+                  }}
+                  style={{ ...inp, background: "white" }}
+                  className={errorClass("provincia")}
+                >
+                  <option value="">Selecciona provincia…</option>
+                  {PROVINCIAS.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+          </div>
+
           <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
             <div style={{ fontWeight: 900 }}>
-              {banner.mode === "plantilla" ? "Has elegido una plantilla" : "Has elegido diseño exclusivo"}
+              {banner.mode === "plantilla"
+                ? "Has elegido una plantilla"
+                : banner.mode === "digital"
+                ? "Has elegido Orla Digital"
+                : "Has elegido diseño exclusivo"}
             </div>
 
             {banner.mode === "plantilla" && tpl && (
@@ -290,16 +519,24 @@ export default function PresupuestoClient() {
                 <div>
                   <div style={{ fontWeight: 900 }}>{banner.title.replace(/\.webp$/i, "").replace(/\.jpe?g$/i, "")}</div>
                   <div style={{ color: "var(--muted)", fontSize: 13 }}>{cat ? `Categoría: ${cat}` : ""}</div>
-                  <div style={{ marginTop: 8 }}>
-                    <a href="/plantillas" className="btnOutline">
-                      Cambiar plantilla
-                    </a>
-                  </div>
+                  {esLocal && (
+                    <div style={{ marginTop: 8 }}>
+                      <a href="/plantillas" className="btnOutline">
+                        Cambiar plantilla
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
-            {banner.mode !== "plantilla" && (
+            {banner.mode === "digital" && (
+              <div style={{ marginTop: 8, color: "var(--muted)" }}>
+                Modalidad nacional: el centro envía las fotos y Lucía realiza el retoque, maquetación e impresión. (+{PRICE.envio_nacional} € logística)
+              </div>
+            )}
+
+            {banner.mode !== "plantilla" && banner.mode !== "digital" && (
               <div style={{ marginTop: 8, color: "var(--muted)" }}>
                 Perfecto. En comentarios puedes indicar temática, referencias o estilo.
               </div>
@@ -309,8 +546,17 @@ export default function PresupuestoClient() {
           <div className="card" style={{ marginTop: 16 }}>
             <div style={{ fontWeight: 900 }}>Nos ocupamos de todo</div>
             <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
-              Diseño de la orla (si es exclusiva), maquetación, fotografías <i>in situ</i>, retoque fotográfico, impresión en
-              alta calidad, formato <b>A3</b>, papel de buen gramaje y <b>entrega en mano</b>.
+              {tipoOrla === "digital" ? (
+                <>
+                  Retoque fotográfico, maquetación, impresión en alta calidad, formato <b>A3</b>, papel de buen gramaje y{" "}
+                  <b>envío nacional</b>. (Las fotos las envía el centro).
+                </>
+              ) : (
+                <>
+                  Diseño de la orla (si es exclusiva), maquetación, fotografías <i>in situ</i>, retoque fotográfico,
+                  impresión en alta calidad, formato <b>A3</b>, papel de buen gramaje y <b>entrega en mano</b>.
+                </>
+              )}
             </div>
           </div>
 
@@ -329,6 +575,7 @@ export default function PresupuestoClient() {
                 const telefonoRaw = String(formData.get("telefono") || "").trim();
 
                 const nextErrors: Errors = {};
+                if (!provincia) nextErrors.provincia = "Selecciona una provincia.";
                 if (!contacto) nextErrors.contacto = "El nombre es obligatorio.";
                 if (!email) nextErrors.email = "El email es obligatorio.";
                 else if (!isValidEmail(email)) nextErrors.email = "Email no válido.";
@@ -354,7 +601,10 @@ export default function PresupuestoClient() {
                   contacto_email: email,
                   contacto_telefono: telefonoRaw,
                   contacto_telefono_wa: telefonoWa,
-                  ciudad: String(formData.get("zona") || "").trim(),
+
+                  provincia: provincia,
+                  ciudad: String(formData.get("ciudad") || "").trim(),
+
                   fecha_evento: String(formData.get("fechas") || "").trim(),
                   curso: String(formData.get("curso") || "").trim(),
                   comentarios: String(formData.get("comentarios") || "").trim(),
@@ -362,6 +612,15 @@ export default function PresupuestoClient() {
                   estado: estado,
                   tipo_orla: tipoOrla,
                   alumnos: alumnosN,
+
+                  precios: {
+                    unitario: calc.unitBase,
+                    envio: calc.envioSinIva,
+                    iva_pct: calc.ivaPct,
+                    subtotal_sin_iva: calc.subtotalSinIva,
+                    total_con_iva: calc.totalConIva,
+                  },
+
                   extras: {
                     beca_graduacion: extraBeca,
                     taza: extraTaza,
@@ -369,8 +628,9 @@ export default function PresupuestoClient() {
                     fotos_recuerdo: extraFotosRecuerdo,
                   },
 
-                  plantilla_url: tpl || "",
-                  categoria_plantilla: cat || "",
+                  // si no es local, digital manda sin plantilla
+                  plantilla_url: esLocal ? tpl || "" : "",
+                  categoria_plantilla: esLocal ? cat || "" : "",
                 };
 
                 try {
@@ -394,6 +654,7 @@ export default function PresupuestoClient() {
                     setExtraSobre(false);
                     setExtraFotosRecuerdo(false);
                     setAlumnosStr("");
+                    // mantenemos provincia seleccionada (para no volver loco al usuario)
                     setTimeout(() => router.push("/"), 2500);
                   } else {
                     setStatus("error");
@@ -433,12 +694,15 @@ export default function PresupuestoClient() {
                 />
               </Field>
 
-              <Field label="Ciudad / Provincia (opcional)">
-                <input name="zona" placeholder="Ej: Madrid / Toledo" style={inp} />
+              {/* ✅ Provincia ya arriba, pero la dejamos también aquí por accesibilidad/validación visual */}
+              {errors.provincia ? <div style={errInline}>⚠️ {errors.provincia}</div> : null}
+
+              <Field label="Ciudad (opcional)">
+                <input name="ciudad" placeholder="Ej: Móstoles / Talavera / Valencia" style={inp} />
               </Field>
 
-              <Field label="Fechas orientativas para las fotos (opcional)">
-                <input name="fechas" placeholder="Ej: 10–20 marzo" style={inp} />
+              <Field label="Fechas orientativas (opcional)">
+                <input name="fechas" placeholder={tipoOrla === "digital" ? "Ej: Semana del 10–20 marzo" : "Ej: 10–20 marzo"} style={inp} />
               </Field>
 
               <Field label="Nombre y apellidos *">
@@ -544,10 +808,37 @@ export default function PresupuestoClient() {
                     <span className="tipBox">
                       Pack de fotos individuales para las familias (ideal como recuerdo).
                       <br />
-                      <b>Se calcula por alumno</b>. (Añadiremos un ejemplo visual en esta misma zona.)
+                      <b>Se calcula por alumno</b>.
                     </span>
                   </span>
                 </label>
+              </div>
+
+              {/* ✅ Resumen cálculo (incluye envío si digital) */}
+              <div className="card" style={{ background: "white", border: "1px solid var(--border)" }}>
+                <div style={{ fontWeight: 900, marginBottom: 8 }}>Resumen</div>
+                <div style={{ display: "grid", gap: 6, color: "var(--muted)" }}>
+                  <div>
+                    Modalidad: <b style={{ color: "var(--text)" }}>{tipoOrla === "digital" ? "Digital" : tipoOrla}</b>
+                  </div>
+                  <div>
+                    Precio unitario: <b style={{ color: "var(--text)" }}>{calc.unitBase.toFixed(2)} €</b> / alumno
+                  </div>
+                  {calc.envioSinIva > 0 && (
+                    <div>
+                      Logística nacional: <b style={{ color: "var(--text)" }}>{calc.envioSinIva.toFixed(2)} €</b> / pedido
+                    </div>
+                  )}
+                  <div>
+                    Subtotal (sin IVA): <b style={{ color: "var(--text)" }}>{calc.subtotalSinIva.toFixed(2)} €</b>
+                  </div>
+                  <div>
+                    IVA ({calc.ivaPct}%): <b style={{ color: "var(--text)" }}>{calc.iva.toFixed(2)} €</b>
+                  </div>
+                  <div style={{ fontSize: 16 }}>
+                    Total: <b style={{ color: "var(--brand-hover)" }}>{calc.totalConIva.toFixed(2)} €</b>
+                  </div>
+                </div>
               </div>
 
               <button
@@ -625,6 +916,17 @@ const errBox: React.CSSProperties = {
   fontWeight: 900,
 };
 
+const errInline: React.CSSProperties = {
+  marginTop: -6,
+  marginBottom: 6,
+  padding: "10px 12px",
+  borderRadius: 12,
+  background: "#fef2f2",
+  border: "1px solid #fecaca",
+  color: "#7f1d1d",
+  fontWeight: 900,
+};
+
 const checkRow: React.CSSProperties = { display: "flex", gap: 10, alignItems: "center", padding: "6px 0" };
 
 function pill(active: boolean): React.CSSProperties {
@@ -642,7 +944,7 @@ function pill(active: boolean): React.CSSProperties {
   };
 }
 
-/* ✅ estilos para los 2 bloques del selector */
+/* ✅ estilos para los bloques del selector */
 const choiceCard: React.CSSProperties = {
   background: "white",
   border: "1px solid var(--border)",
