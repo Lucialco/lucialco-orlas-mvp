@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     const lastUser =
       [...messages].reverse().find((m: any) => m?.role === "user")?.content || "";
 
-    // ✅ Presupuestos NO dependen de OpenAI
+    // ✅ PRESUPUESTOS (NO dependen de OpenAI)
     if (detectQuoteIntent(lastUser)) {
       const alumnos = extractAlumnos(lastUser);
       if (!alumnos) {
@@ -70,10 +70,12 @@ export async function POST(req: Request) {
       });
     }
 
-    // ✅ Dudas (RAG + IA si hay key)
+    // ✅ DUDAS (RAG + IA si hay key)
     const { context } = await retrieveContext(lastUser, 6);
 
     const key = process.env.OPENAI_API_KEY;
+
+    // Si no hay IA o no hay contexto -> WhatsApp (sin inventar)
     if (!key || !context) {
       return NextResponse.json({
         text:
@@ -87,8 +89,8 @@ export async function POST(req: Request) {
         role: "system",
         content:
           `Eres el asistente de Lucialco Orlas.\n` +
-          `Estilo: español natural y profesional (sin jerga).\n` +
-          `Reglas: responde SOLO con el contexto. Si falta un dato, pregunta 1-2 datos concretos. Si no puedes confirmarlo, deriva a WhatsApp (${WHATSAPP}).`,
+          `Estilo: español natural y profesional, sin jerga.\n` +
+          `Reglas: responde SOLO con el contexto. Si falta un dato, pregunta 1-2 cosas concretas. Si no puedes confirmarlo, deriva a WhatsApp (${WHATSAPP}).`,
       },
       { role: "user", content: `Pregunta: ${lastUser}\n\nContexto:\n${context}` },
     ];
