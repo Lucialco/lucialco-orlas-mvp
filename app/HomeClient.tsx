@@ -9,7 +9,7 @@ type CarouselItem = {
   title: string;
   subtitle: string;
   href: string;
-  img: string; // desde /public
+  img: string;
 };
 
 function clampIndex(i: number, len: number) {
@@ -84,8 +84,6 @@ export default function HomeClient() {
   const current = items[clampIndex(idx, items.length)];
   const [imgOk, setImgOk] = useState(true);
 
-  // Si cambias de slide, asumimos OK hasta que falle.
-  // (si falla, mostramos fallback con texto)
   const onPrev = () => {
     setImgOk(true);
     setIdx((p) => clampIndex(p - 1, items.length));
@@ -122,66 +120,45 @@ export default function HomeClient() {
               Nosotras nos ocupamos del resto. Y sí: <b>puedes hablar con nosotras en todo momento</b>.
             </p>
 
-            {/* ✅ Botones mismo tamaño + “Ver plantillas” a la izquierda */}
+            {/* BOTONES AJUSTADOS */}
             <div
               style={{
                 marginTop: 18,
                 display: "grid",
-                gap: 12,
+                gap: 10,
                 gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
               }}
             >
-              <a
-                href="/plantillas"
-                className="btnOutline"
-                style={{ width: "100%", textAlign: "center", display: "inline-flex", justifyContent: "center" }}
-              >
-                Ver plantillas
-              </a>
-
-              <a
-                href="/presupuesto"
-                className="btnPrimary"
-                style={{ width: "100%", textAlign: "center", display: "inline-flex", justifyContent: "center" }}
-              >
-                Solicitar presupuesto
-              </a>
-
-              <a
-                href={WHATSAPP_LINK}
-                target="_blank"
-                rel="noreferrer"
-                className="btnOutline"
-                style={{ width: "100%", textAlign: "center", display: "inline-flex", justifyContent: "center" }}
-              >
-                Habla con nosotras
-              </a>
+              {[
+                { href: "/plantillas", label: "Ver plantillas", cls: "btnOutline" },
+                { href: "/presupuesto", label: "Solicitar presupuesto", cls: "btnPrimary" },
+                { href: WHATSAPP_LINK, label: "Habla con nosotras", cls: "btnOutline", ext: true },
+              ].map((b) => (
+                <a
+                  key={b.label}
+                  href={b.href}
+                  target={b.ext ? "_blank" : undefined}
+                  rel={b.ext ? "noreferrer" : undefined}
+                  className={b.cls}
+                  style={{
+                    width: "100%",
+                    minHeight: 42,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 14,
+                    padding: "8px 12px",
+                  }}
+                >
+                  {b.label}
+                </a>
+              ))}
             </div>
 
             <p style={{ marginTop: 10, color: "var(--muted)", fontSize: 13 }}>Respuesta rápida · Proceso claro</p>
-
-            <div style={{ marginTop: 22, display: "grid", gap: 10 }}>
-              {[
-                "Fotografía profesional en el centro",
-                "Retoque natural y diseño cuidado",
-                "Proceso claro, sin sorpresas",
-                "Comunicación directa en todo momento",
-              ].map((t) => (
-                <div
-                  key={t}
-                  className="card"
-                  style={{ padding: "10px 12px", display: "flex", gap: 10, alignItems: "center" }}
-                >
-                  <span aria-hidden style={{ fontWeight: 900, color: "var(--brand-hover)" }}>
-                    ✓
-                  </span>
-                  <span style={{ color: "var(--text)" }}>{t}</span>
-                </div>
-              ))}
-            </div>
           </div>
 
-          {/* ✅ SOLO carrusel */}
+          {/* Carrusel */}
           <div className="card" style={{ background: "var(--brand-soft)", height: "fit-content" }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
               <div>
@@ -208,7 +185,6 @@ export default function HomeClient() {
                     borderBottom: "1px solid var(--border)",
                   }}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={current?.img}
                     alt={current?.title || "Destacado"}
@@ -222,31 +198,13 @@ export default function HomeClient() {
                     onLoad={() => setImgOk(true)}
                     onError={() => setImgOk(false)}
                   />
-
-                  {!imgOk && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "var(--muted)",
-                        fontWeight: 900,
-                        padding: 12,
-                        textAlign: "center",
-                      }}
-                    >
-                      {current?.title}
-                    </div>
-                  )}
                 </div>
 
                 <div style={{ padding: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 900, color: "var(--text)" }}>{current?.title}</div>
-                      <div style={{ marginTop: 4, color: "var(--muted)", lineHeight: 1.45 }}>{current?.subtitle}</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                    <div>
+                      <div style={{ fontWeight: 900 }}>{current?.title}</div>
+                      <div style={{ color: "var(--muted)", fontSize: 13 }}>{current?.subtitle}</div>
                     </div>
 
                     <span
@@ -258,7 +216,6 @@ export default function HomeClient() {
                         fontSize: 12,
                         fontWeight: 900,
                         color: "var(--brand-hover)",
-                        whiteSpace: "nowrap",
                       }}
                     >
                       {current?.kind === "extra" ? "Extra" : "Plantilla"}
@@ -267,109 +224,51 @@ export default function HomeClient() {
                 </div>
               </a>
             </div>
-
-            <div style={{ marginTop: 12, display: "flex", justifyContent: "center", gap: 6 }}>
-              {items.map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  aria-label={`Ir al destacado ${i + 1}`}
-                  onClick={() => {
-                    setImgOk(true);
-                    setIdx(i);
-                  }}
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: 999,
-                    border: "none",
-                    background: i === clampIndex(idx, items.length) ? "var(--brand)" : "rgba(0,0,0,0.18)",
-                    cursor: "pointer",
-                  }}
-                />
-              ))}
-            </div>
           </div>
         </div>
       </section>
 
-      {/* How it works */}
-      <section style={{ padding: "10px 0 10px" }}>
-        <h2 style={{ fontSize: 26, margin: "0 0 14px" }}>Cómo funciona</h2>
+      {/* CÓMO FUNCIONA */}
+      <section style={{ padding: "10px 0" }}>
+        <h2 style={{ fontSize: 26, marginBottom: 14 }}>Cómo funciona</h2>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14 }}>
           {[
-            { n: "1", t: "Pide presupuesto", d: "Cuéntanos curso, número de alumnos y fechas orientativas." },
-            { n: "2", t: "Reservamos fecha", d: "Concretamos el día de las fotos y bloqueamos el hueco en el calendario." },
-            { n: "3", t: "Sesión de fotos + diseño", d: "Hacemos las fotos y diseñamos la orla." },
-            { n: "4", t: "Entrega y revisión", d: "Te enseñamos el resultado y cerramos la entrega." },
+            { n: "1", icon: "📝", t: "Pide presupuesto", d: "Cuéntanos curso, número de alumnos y fechas orientativas." },
+            { n: "2", icon: "📅", t: "Reservamos fecha", d: "Concretamos el día de las fotos y bloqueamos el hueco." },
+            { n: "3", icon: "📸🎨", t: "Sesión de fotos + diseño", d: "Hacemos las fotos y diseñamos la orla." },
+            { n: "4", icon: "📦✅", t: "Entrega y revisión", d: "Te enseñamos el resultado y cerramos la entrega." },
           ].map((s) => (
             <div key={s.n} className="card">
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 10,
-                  background: "var(--brand)",
-                  color: "white",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: 900,
-                  marginBottom: 10,
-                }}
-              >
-                {s.n}
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
+                <div
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 10,
+                    background: "var(--brand)",
+                    color: "white",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 900,
+                  }}
+                >
+                  {s.n}
+                </div>
+                <span style={{ fontSize: 20 }}>{s.icon}</span>
               </div>
+
               <div style={{ fontWeight: 900 }}>{s.t}</div>
-              <div style={{ color: "var(--muted)", marginTop: 6, lineHeight: 1.45 }}>
-                {s.d}
-              </div>
+              <div style={{ color: "var(--muted)", marginTop: 6 }}>{s.d}</div>
             </div>
           ))}
-        </div>
-
-        <div className="card" style={{ marginTop: 18, background: "white" }}>
-          <div className="badge">Creatividad humana</div>
-          <div style={{ fontWeight: 900, marginTop: 10 }}>Aquí no hay automatismos sin alma.</div>
-          <p style={{ margin: "8px 0 0", color: "var(--muted)", lineHeight: 1.55 }}>
-            Cada orla se fotografía, retoca y diseña <b>persona a persona</b>. Atención real y resultados que representan al
-            grupo.
-          </p>
-        </div>
-
-        <div
-          className="card"
-          style={{
-            marginTop: 18,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap",
-          }}
-        >
-          <div>
-            <div style={{ fontWeight: 900, fontSize: 18 }}>¿Lista la orla, sin dolores de cabeza?</div>
-            <div style={{ color: "var(--muted)", marginTop: 4 }}>Elige plantilla o pide diseño a medida.</div>
-          </div>
-
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <a href="/plantillas" className="btnPrimary">
-              Ver plantillas
-            </a>
-            <a href="/presupuesto?tipo=adhoc" className="btnOutline">
-              Diseño a medida
-            </a>
-            <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer" className="btnOutline">
-              Habla con nosotras
-            </a>
-          </div>
         </div>
       </section>
     </div>
   );
 }
+
 
 
 
