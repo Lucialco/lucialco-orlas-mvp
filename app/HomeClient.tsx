@@ -122,16 +122,38 @@ export default function HomeClient() {
               Nosotras nos ocupamos del resto. Y sí: <b>puedes hablar con nosotras en todo momento</b>.
             </p>
 
-            <div style={{ display: "flex", gap: 12, marginTop: 18, flexWrap: "wrap" }}>
-              <a href="/presupuesto" className="btnPrimary">
-                Solicitar presupuesto
-              </a>
-
-              <a href="/plantillas" className="btnOutline">
+            {/* ✅ Botones mismo tamaño + “Ver plantillas” a la izquierda */}
+            <div
+              style={{
+                marginTop: 18,
+                display: "grid",
+                gap: 12,
+                gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+              }}
+            >
+              <a
+                href="/plantillas"
+                className="btnOutline"
+                style={{ width: "100%", textAlign: "center", display: "inline-flex", justifyContent: "center" }}
+              >
                 Ver plantillas
               </a>
 
-              <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer" className="btnOutline">
+              <a
+                href="/presupuesto"
+                className="btnPrimary"
+                style={{ width: "100%", textAlign: "center", display: "inline-flex", justifyContent: "center" }}
+              >
+                Solicitar presupuesto
+              </a>
+
+              <a
+                href={WHATSAPP_LINK}
+                target="_blank"
+                rel="noreferrer"
+                className="btnOutline"
+                style={{ width: "100%", textAlign: "center", display: "inline-flex", justifyContent: "center" }}
+              >
                 Habla con nosotras
               </a>
             </div>
@@ -311,7 +333,8 @@ export default function HomeClient() {
           <div className="badge">Creatividad humana</div>
           <div style={{ fontWeight: 900, marginTop: 10 }}>Aquí no hay automatismos sin alma.</div>
           <p style={{ margin: "8px 0 0", color: "var(--muted)", lineHeight: 1.55 }}>
-            Cada orla se fotografía, retoca y diseña <b>persona a persona</b>. Atención real y resultados que representan al grupo.
+            Cada orla se fotografía, retoca y diseña <b>persona a persona</b>. Atención real y resultados que representan al
+            grupo.
           </p>
         </div>
 
@@ -347,6 +370,7 @@ export default function HomeClient() {
     </div>
   );
 }
+
 
 
 
