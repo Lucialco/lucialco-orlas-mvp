@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
-// 👇 Imports RELATIVOS para evitar problemas con el alias @
-import { retrieveContext } from "../../../../lib/rag";
-import { calcQuote } from "../../../../lib/pricing";
+// ✅ 3 niveles hacia arriba desde app/api/chat/route.ts
+import { retrieveContext } from "../../../lib/rag";
+import { calcQuote } from "../../../lib/pricing";
 
 export const runtime = "nodejs";
 
@@ -13,7 +13,6 @@ function tryParseQuote(
   tipo: "plantilla" | "exclusiva";
   extras: { beca: boolean; taza: boolean; sobre: boolean };
 } | null {
-  // Detecta el primer número que aparezca (V1 simple)
   const alumnosMatch = text.match(/(\d{1,4})/);
   const alumnos = alumnosMatch ? parseInt(alumnosMatch[1], 10) : 0;
 
@@ -31,7 +30,6 @@ function tryParseQuote(
   };
 
   if (!alumnos || !tipo) return null;
-
   return { alumnos, tipo, extras };
 }
 
@@ -52,7 +50,7 @@ export async function POST(req: Request) {
       [...messages].reverse().find((m: any) => m?.role === "user")?.content ||
       "";
 
-    // 1) Presupuesto -> cálculo determinista en código
+    // 1) Presupuesto -> cálculo determinista
     const quoteReq = tryParseQuote(lastUser);
     if (quoteReq) {
       const q = calcQuote(quoteReq);
@@ -71,12 +69,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ text });
     }
 
-    // 2) Consulta -> RAG con contenido indexado
+    // 2) Consulta -> RAG
     const { context } = await retrieveContext(lastUser, 6);
 
     const system = `
 Eres el asistente de Lucialco Orlas.
-
 Reglas:
 - Responde SOLO usando el contexto.
 - Si no hay contexto útil, di: "No lo tengo confirmado" y deriva a WhatsApp.
