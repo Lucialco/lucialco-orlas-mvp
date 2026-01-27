@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import "./globals.css";
 import HamburgerMenu from "./components/HamburgerMenu";
+import ChatWidget from "./components/ChatWidget";
 
 const GTM_ID = "GTM-T9LNC454";
 
@@ -126,6 +127,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
         {/* Contenido */}
         <main className="page">{children}</main>
+
+        {/* ✅ ChatWidget en TODAS las páginas */}
+        <ChatWidget />
 
         {/* Footer */}
         <footer className="footer">
