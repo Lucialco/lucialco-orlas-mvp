@@ -27,7 +27,9 @@ function loadKB(): KB {
 }
 
 function dot(a: number[], b: number[]) {
-  return a.reduce((s, v, i) => s + v * b[i], 0);
+  let s = 0;
+  for (let i = 0; i < a.length; i++) s += a[i] * b[i];
+  return s;
 }
 
 function norm(a: number[]) {
@@ -39,10 +41,13 @@ function cosine(a: number[], b: number[]) {
 }
 
 export async function embedQuery(q: string): Promise<number[]> {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) throw new Error("Missing OPENAI_API_KEY");
+
   const r = await fetch("https://api.openai.com/v1/embeddings", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -62,22 +67,18 @@ export async function retrieveContext(query: string, topK = 6) {
   const qEmb = await embedQuery(query);
 
   const scored = kb.items
-    .map(it => ({
-      it,
-      score: cosine(qEmb, it.embedding),
-    }))
+    .map(it => ({ it, score: cosine(qEmb, it.embedding) }))
     .sort((a, b) => b.score - a.score)
     .slice(0, topK);
 
   const best = scored[0]?.score ?? 0;
+
+  // Umbral anti-inventadas
   if (best < 0.25) {
     return { context: "", sources: [] as string[] };
   }
 
-  const context = scored
-    .map(s => `- (${s.it.url}) ${s.it.text}`)
-    .join("\n");
-
+  const context = scored.map(s => `- (${s.it.url}) ${s.it.text}`).join("\n");
   const sources = Array.from(new Set(scored.map(s => s.it.url)));
 
   return { context, sources };
