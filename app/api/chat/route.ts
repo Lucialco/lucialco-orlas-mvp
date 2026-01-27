@@ -1,93 +1,96 @@
 import { NextResponse } from "next/server";
-
-// ✅ 3 niveles hacia arriba desde app/api/chat/route.ts
 import { retrieveContext } from "../../../lib/rag";
 import { calcQuote } from "../../../lib/pricing";
 
 export const runtime = "nodejs";
+const WHATSAPP = "https://wa.me/34606849914";
 
-function tryParseQuote(
-  text: string
-): {
-  alumnos: number;
-  tipo: "plantilla" | "exclusiva";
-  extras: { beca: boolean; taza: boolean; sobre: boolean };
-} | null {
-  const alumnosMatch = text.match(/(\d{1,4})/);
-  const alumnos = alumnosMatch ? parseInt(alumnosMatch[1], 10) : 0;
+function extractAlumnos(text: string): number | null {
+  const m = text.match(/(\d{1,4})/);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
 
-  const tipo: "plantilla" | "exclusiva" | null =
-    /exclusiv/i.test(text)
-      ? "exclusiva"
-      : /plantill/i.test(text)
-      ? "plantilla"
-      : null;
+function detectTipo(text: string): "plantilla" | "exclusiva" | null {
+  if (/exclusiv/i.test(text)) return "exclusiva";
+  if (/plantill/i.test(text)) return "plantilla";
+  return null;
+}
 
-  const extras = {
-    beca: /beca/i.test(text),
-    taza: /taza/i.test(text),
-    sobre: /sobre/i.test(text),
-  };
-
-  if (!alumnos || !tipo) return null;
-  return { alumnos, tipo, extras };
+function detectQuoteIntent(text: string): boolean {
+  return /(presupuesto|precio|cu[aá]nto cuesta|cu[aá]nto vale|coste)/i.test(text) &&
+    /(orla|alumn|niñ|estudiant)/i.test(text);
 }
 
 export async function POST(req: Request) {
   try {
-    const key = process.env.OPENAI_API_KEY;
-    if (!key) {
-      return NextResponse.json(
-        { error: "Missing OPENAI_API_KEY" },
-        { status: 500 }
-      );
-    }
-
     const body = await req.json();
     const messages = Array.isArray(body?.messages) ? body.messages : [];
-
     const lastUser =
-      [...messages].reverse().find((m: any) => m?.role === "user")?.content ||
-      "";
+      [...messages].reverse().find((m: any) => m?.role === "user")?.content || "";
 
-    // 1) Presupuesto -> cálculo determinista
-    const quoteReq = tryParseQuote(lastUser);
-    if (quoteReq) {
-      const q = calcQuote(quoteReq);
+    // ✅ Presupuestos NO dependen de OpenAI
+    if (detectQuoteIntent(lastUser)) {
+      const alumnos = extractAlumnos(lastUser);
+      if (!alumnos) {
+        return NextResponse.json({ text: "De acuerdo. ¿Para cuántos alumnos es la orla?" });
+      }
 
-      const text =
-        `📊 Presupuesto estimado (con IVA):\n` +
-        `- Alumnos: ${q.alumnos}\n` +
-        `- Tipo: ${q.tipo}\n` +
-        `- Base: ${q.base.toFixed(2)} €\n` +
-        `- Extras: ${q.extrasTotal.toFixed(2)} €\n` +
-        `- Subtotal: ${q.subtotal.toFixed(2)} €\n` +
-        `- IVA: ${q.iva.toFixed(2)} €\n` +
-        `- TOTAL: ${q.total.toFixed(2)} €\n\n` +
-        `Si quieres lo pasamos a WhatsApp 👉 https://wa.me/34606849914`;
+      const extras = {
+        beca: /beca/i.test(lastUser),
+        taza: /taza/i.test(lastUser),
+        sobre: /sobre/i.test(lastUser),
+      };
 
-      return NextResponse.json({ text });
+      const tipo = detectTipo(lastUser);
+
+      if (!tipo) {
+        const p = calcQuote({ alumnos, tipo: "plantilla", extras: {} });
+        const e = calcQuote({ alumnos, tipo: "exclusiva", extras: {} });
+
+        return NextResponse.json({
+          text:
+            `Para ${alumnos} alumnos, sin extras (con IVA):\n` +
+            `- Plantilla: ${p.total.toFixed(2)} €\n` +
+            `- Exclusiva: ${e.total.toFixed(2)} €\n\n` +
+            `¿Cuál prefieres? Si me dices extras (beca, taza, sobre) lo ajusto.`,
+        });
+      }
+
+      const q = calcQuote({ alumnos, tipo, extras });
+
+      return NextResponse.json({
+        text:
+          `Presupuesto estimado (con IVA):\n` +
+          `- Alumnos: ${q.alumnos}\n` +
+          `- Tipo: ${q.tipo}\n` +
+          `- TOTAL: ${q.total.toFixed(2)} €\n\n` +
+          `Si quieres, lo gestionamos por WhatsApp: ${WHATSAPP}`,
+      });
     }
 
-    // 2) Consulta -> RAG
+    // ✅ Dudas (RAG + IA si hay key)
     const { context } = await retrieveContext(lastUser, 6);
 
-    const system = `
-Eres el asistente de Lucialco Orlas.
-Reglas:
-- Responde SOLO usando el contexto.
-- Si no hay contexto útil, di: "No lo tengo confirmado" y deriva a WhatsApp.
-- No inventes precios ni condiciones.
-- Sé claro y breve.
-WhatsApp: https://wa.me/34606849914
-`;
+    const key = process.env.OPENAI_API_KEY;
+    if (!key || !context) {
+      return NextResponse.json({
+        text:
+          `No dispongo de esa información confirmada ahora mismo.\n` +
+          `WhatsApp: ${WHATSAPP}`,
+      });
+    }
 
     const input = [
-      { role: "system", content: system },
       {
-        role: "user",
-        content: `Pregunta: ${lastUser}\n\nContexto:\n${context || "[VACÍO]"}`,
+        role: "system",
+        content:
+          `Eres el asistente de Lucialco Orlas.\n` +
+          `Estilo: español natural y profesional (sin jerga).\n` +
+          `Reglas: responde SOLO con el contexto. Si falta un dato, pregunta 1-2 datos concretos. Si no puedes confirmarlo, deriva a WhatsApp (${WHATSAPP}).`,
       },
+      { role: "user", content: `Pregunta: ${lastUser}\n\nContexto:\n${context}` },
     ];
 
     const r = await fetch("https://api.openai.com/v1/responses", {
@@ -104,19 +107,19 @@ WhatsApp: https://wa.me/34606849914
     });
 
     if (!r.ok) {
-      return NextResponse.json({ error: await r.text() }, { status: 500 });
+      return NextResponse.json({
+        text: `Ahora mismo no puedo completar la respuesta desde la web. WhatsApp: ${WHATSAPP}`,
+      });
     }
 
     const data = await r.json();
-    const text =
-      data.output_text ||
-      "No lo tengo confirmado. ¿Lo vemos por WhatsApp? https://wa.me/34606849914";
-
-    return NextResponse.json({ text });
-  } catch (e: any) {
-    return NextResponse.json(
-      { error: e?.message || "Error interno" },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      text: data.output_text || `WhatsApp: ${WHATSAPP}`,
+    });
+  } catch {
+    return NextResponse.json({
+      text: `Ha ocurrido un error al procesar tu consulta. WhatsApp: ${WHATSAPP}`,
+    });
   }
 }
+
