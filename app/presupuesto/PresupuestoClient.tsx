@@ -64,22 +64,28 @@ const PROVINCIAS = [
   "Zaragoza",
 ] as const;
 
+// ✅ PRECIOS ACTUALIZADOS
 const PRICE = {
   // Presencial (Madrid/Toledo)
-  local_plantilla: 12.5,
-  local_exclusiva: 14.5,
+  local_plantilla: 11.5,
+  local_exclusiva: 15,
 
   // Digital (resto España)
   digital_plantilla: 9,
-  digital_exclusiva: 12,
+  digital_exclusiva: 10.5,
   envio_nacional: 15,
 
-  extra_beca: 8,
-  extra_taza: 5,
+  extra_beca: 5,
+  extra_taza: 9.5,
   extra_sobre: 3,
   extra_fotos_recuerdo: 4.5, // por alumno
+
   iva_pct: 21,
 } as const;
+
+// ✅ Texto que debe viajar en el presupuesto enviado (solo si hay extras)
+const EXTRAS_DISCLAIMER =
+  "Nota: el precio de los extras es orientativo y está pendiente de confirmar detalles de acabados (por ejemplo, impresión y tonos de color).";
 
 type Status = "idle" | "sending" | "sent" | "error";
 type EstadoPresupuesto = "informativo" | "interesado";
@@ -157,7 +163,7 @@ export default function PresupuestoClient() {
   // Modalidad elegida (se decide DESPUÉS de provincia)
   const [modalidad, setModalidad] = useState<ModalidadOrla | null>(null);
 
-  // ✅ 1) Cargar provincia/modalidad guardadas (para volver desde /plantillas sin perder nada)
+  // ✅ 1) Cargar provincia/modalidad guardadas
   useEffect(() => {
     try {
       const p = localStorage.getItem(LS_PROVINCIA) || "";
@@ -169,14 +175,14 @@ export default function PresupuestoClient() {
     }
   }, []);
 
-  // ✅ 2) Compat: si viene tipo=adhoc y no hay modalidad aún, ponemos exclusiva (luego provincia manda)
+  // ✅ 2) Compat: tipo=adhoc => exclusiva (luego provincia manda)
   useEffect(() => {
     if (modalidad) return;
     if (tipoQS === "adhoc") setModalidad("local_exclusiva");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tipoQS]);
 
-  // ✅ 3) Si viene con tpl y aún no hay modalidad, asumimos plantilla según provincia (local/digital)
+  // ✅ 3) Si viene con tpl y aún no hay modalidad, asumimos plantilla según provincia
   useEffect(() => {
     if (!tpl) return;
     if (!provinciaOk) return;
@@ -185,7 +191,7 @@ export default function PresupuestoClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tpl, provinciaOk, esLocal]);
 
-  // ✅ 4) Guardar provincia/modalidad cada vez que cambien
+  // ✅ 4) Guardar provincia/modalidad
   useEffect(() => {
     try {
       if (provincia) localStorage.setItem(LS_PROVINCIA, provincia);
@@ -235,17 +241,51 @@ export default function PresupuestoClient() {
 
     const lines = [
       extraBeca
-        ? { key: "beca", label: "Beca de graduación personalizada (cole)", unit: PRICE.extra_beca, qty, total: qty * PRICE.extra_beca }
+        ? {
+            key: "beca",
+            label: "Beca de graduación personalizada (cole)",
+            unit: PRICE.extra_beca,
+            qty,
+            total: qty * PRICE.extra_beca,
+          }
         : null,
-      extraTaza ? { key: "taza", label: "Taza con foto", unit: PRICE.extra_taza, qty, total: qty * PRICE.extra_taza } : null,
-      extraSobre ? { key: "sobre", label: "Sobres reforzados con nombre", unit: PRICE.extra_sobre, qty, total: qty * PRICE.extra_sobre } : null,
+      extraTaza
+        ? {
+            key: "taza",
+            label: "Taza con foto",
+            unit: PRICE.extra_taza,
+            qty,
+            total: qty * PRICE.extra_taza,
+          }
+        : null,
+      extraSobre
+        ? {
+            key: "sobre",
+            label: "Sobres reforzados con nombre",
+            unit: PRICE.extra_sobre,
+            qty,
+            total: qty * PRICE.extra_sobre,
+          }
+        : null,
       extraFotosRecuerdo
-        ? { key: "fotos", label: "Fotos de recuerdo", unit: PRICE.extra_fotos_recuerdo, qty, total: qty * PRICE.extra_fotos_recuerdo }
+        ? {
+            key: "fotos",
+            label: "Fotos de recuerdo",
+            unit: PRICE.extra_fotos_recuerdo,
+            qty,
+            total: qty * PRICE.extra_fotos_recuerdo,
+          }
         : null,
     ].filter(Boolean) as Array<{ key: string; label: string; unit: number; qty: number; total: number }>;
 
-    return lines.map((l) => ({ ...l, unit: round2(l.unit), total: round2(l.total) }));
+    return lines.map((l) => ({
+      ...l,
+      unit: round2(l.unit),
+      total: round2(l.total),
+    }));
   }, [extraBeca, extraTaza, extraSobre, extraFotosRecuerdo, alumnos]);
+
+  const hayExtras = extrasDetalle.length > 0;
 
   const calc = useMemo(() => {
     const baseSinIva = alumnos * unitPrice;
@@ -504,14 +544,14 @@ export default function PresupuestoClient() {
           border-radius: 999px;
           border: 1px solid var(--border);
           display: inline-flex;
-          alignItems: center;
-          justifyContent: center;
-          fontWeight: 900;
-          fontSize: 12px;
+          align-items: center;
+          justify-content: center;
+          font-weight: 900;
+          font-size: 12px;
           color: var(--brand-hover);
           background: white;
           cursor: help;
-          userSelect: none;
+          user-select: none;
         }
         .tipBox {
           position: absolute;
@@ -547,7 +587,7 @@ export default function PresupuestoClient() {
       {/* Si no hay provincia, no seguimos */}
       {!provinciaOk ? null : (
         <>
-          {/* PASO 2: si no hay modalidad elegida, se muestra selector */}
+          {/* PASO 2 */}
           {!modalidad ? (
             ChoiceCard
           ) : (
@@ -595,7 +635,7 @@ export default function PresupuestoClient() {
                   </div>
                 )}
 
-                {/* Si es plantilla y no hay tpl (AHORA BLOQUEA) */}
+                {/* Si es plantilla y no hay tpl */}
                 {modalidad.endsWith("plantilla") && !tpl && (
                   <div style={{ marginTop: 12 }}>
                     <div style={warnBox}>
@@ -633,8 +673,8 @@ export default function PresupuestoClient() {
                     </>
                   ) : (
                     <>
-                      Diseño de la orla (si es exclusiva), maquetación, fotografías <i>in situ</i>, retoque fotográfico,
-                      impresión en alta calidad, formato <b>A3</b>, papel de buen gramaje y <b>entrega en mano</b>.
+                      Diseño de la orla (si es exclusiva), maquetación, fotografías <i>in situ</i>, retoque fotográfico, impresión en
+                      alta calidad, formato <b>A3</b>, papel de buen gramaje y <b>entrega en mano</b>.
                     </>
                   )}
                 </div>
@@ -704,7 +744,11 @@ export default function PresupuestoClient() {
                         iva_pct: calc.ivaPct,
                         subtotal_sin_iva: calc.subtotalSinIva,
                         total_con_iva: calc.totalConIva,
+                        nota_extras: hayExtras ? EXTRAS_DISCLAIMER : "",
                       },
+
+                      // ✅ por si lo quieres directo en el email/template
+                      nota_presupuesto: hayExtras ? EXTRAS_DISCLAIMER : "",
 
                       extras: {
                         beca_graduacion: extraBeca,
@@ -752,7 +796,6 @@ export default function PresupuestoClient() {
                   {formMsg && <div style={formMsgBox}>{formMsg}</div>}
                   {errors.plantilla && <div style={warnBox}>⚠️ {errors.plantilla}</div>}
 
-                  {/* ✅ Provincia ya viene de la selección inicial */}
                   <Field label="Provincia">
                     <input value={provincia} readOnly disabled style={{ ...inp, background: "var(--brand-soft)" }} />
                   </Field>
@@ -784,7 +827,6 @@ export default function PresupuestoClient() {
                     />
                   </Field>
 
-                  {/* ✅ sin “(opcional)” */}
                   <Field label="Ciudad">
                     <input name="ciudad" placeholder="Ej: Móstoles / Talavera / Valencia" style={inp} />
                   </Field>
@@ -862,21 +904,21 @@ export default function PresupuestoClient() {
                     <label style={checkRow}>
                       <input type="checkbox" checked={extraBeca} onChange={(e) => setExtraBeca(e.target.checked)} />
                       <span>
-                        Beca de graduación personalizada (cole) — <b>8,00 €</b> / niñ@
+                        Beca de graduación personalizada (cole) — <b>{PRICE.extra_beca.toFixed(2)} €</b> / niñ@
                       </span>
                     </label>
 
                     <label style={checkRow}>
                       <input type="checkbox" checked={extraTaza} onChange={(e) => setExtraTaza(e.target.checked)} />
                       <span>
-                        Taza con foto — <b>5,00 €</b> / niñ@
+                        Taza con foto — <b>{PRICE.extra_taza.toFixed(2)} €</b> / niñ@
                       </span>
                     </label>
 
                     <label style={checkRow}>
                       <input type="checkbox" checked={extraSobre} onChange={(e) => setExtraSobre(e.target.checked)} />
                       <span>
-                        Sobres reforzados con nombre — <b>3,00 €</b> / niñ@
+                        Sobres reforzados con nombre — <b>{PRICE.extra_sobre.toFixed(2)} €</b> / niñ@
                       </span>
                     </label>
 
@@ -888,7 +930,7 @@ export default function PresupuestoClient() {
                       />
                       <span className="tipWrap">
                         <span>
-                          Fotos de recuerdo — <b>4,50 €</b> / alumno
+                          Fotos de recuerdo — <b>{PRICE.extra_fotos_recuerdo.toFixed(2)} €</b> / alumno
                         </span>
                         <span className="tipIcon" aria-label="Más info" title="Más info">
                           i
@@ -928,6 +970,11 @@ export default function PresupuestoClient() {
                                 <b style={{ color: "var(--text)" }}>{eur(x.total)}</b>
                               </div>
                             ))}
+                          </div>
+
+                          {/* ✅ Copy orientativo SOLO si hay extras */}
+                          <div style={{ marginTop: 10 }}>
+                            <div style={noteBox}>ℹ️ {EXTRAS_DISCLAIMER}</div>
                           </div>
                         </div>
                       )}
@@ -1015,6 +1062,16 @@ const warnBox: React.CSSProperties = {
   border: "1px solid #fed7aa",
   color: "#9a3412",
   fontWeight: 900,
+};
+
+const noteBox: React.CSSProperties = {
+  padding: 12,
+  borderRadius: 12,
+  background: "#eff6ff",
+  border: "1px solid #bfdbfe",
+  color: "#1e3a8a",
+  fontWeight: 800,
+  lineHeight: 1.5,
 };
 
 const okBox: React.CSSProperties = {
