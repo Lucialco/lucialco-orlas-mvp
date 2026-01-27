@@ -1,14 +1,23 @@
 import { NextResponse } from "next/server";
-import { retrieveContext } from "@/lib/rag";
-import { calcQuote } from "@/lib/pricing";
+
+// 👇 Imports RELATIVOS para evitar problemas con el alias @
+import { retrieveContext } from "../../../../lib/rag";
+import { calcQuote } from "../../../../lib/pricing";
 
 export const runtime = "nodejs";
 
-function tryParseQuote(text: string) {
+function tryParseQuote(
+  text: string
+): {
+  alumnos: number;
+  tipo: "plantilla" | "exclusiva";
+  extras: { beca: boolean; taza: boolean; sobre: boolean };
+} | null {
+  // Detecta el primer número que aparezca (V1 simple)
   const alumnosMatch = text.match(/(\d{1,4})/);
-  const alumnos = alumnosMatch ? parseInt(alumnosMatch[1], 10) : null;
+  const alumnos = alumnosMatch ? parseInt(alumnosMatch[1], 10) : 0;
 
-  const tipo =
+  const tipo: "plantilla" | "exclusiva" | null =
     /exclusiv/i.test(text)
       ? "exclusiva"
       : /plantill/i.test(text)
@@ -28,15 +37,23 @@ function tryParseQuote(text: string) {
 
 export async function POST(req: Request) {
   try {
-    const { messages } = await req.json();
+    const key = process.env.OPENAI_API_KEY;
+    if (!key) {
+      return NextResponse.json(
+        { error: "Missing OPENAI_API_KEY" },
+        { status: 500 }
+      );
+    }
+
+    const body = await req.json();
+    const messages = Array.isArray(body?.messages) ? body.messages : [];
 
     const lastUser =
-      [...messages].reverse().find((m: any) => m.role === "user")?.content ||
+      [...messages].reverse().find((m: any) => m?.role === "user")?.content ||
       "";
 
-    // 👉 Si parece presupuesto → calcula
+    // 1) Presupuesto -> cálculo determinista en código
     const quoteReq = tryParseQuote(lastUser);
-
     if (quoteReq) {
       const q = calcQuote(quoteReq);
 
@@ -54,7 +71,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ text });
     }
 
-    // 👉 Si es consulta → RAG
+    // 2) Consulta -> RAG con contenido indexado
     const { context } = await retrieveContext(lastUser, 6);
 
     const system = `
@@ -65,7 +82,6 @@ Reglas:
 - Si no hay contexto útil, di: "No lo tengo confirmado" y deriva a WhatsApp.
 - No inventes precios ni condiciones.
 - Sé claro y breve.
-
 WhatsApp: https://wa.me/34606849914
 `;
 
@@ -80,7 +96,7 @@ WhatsApp: https://wa.me/34606849914
     const r = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${key}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
