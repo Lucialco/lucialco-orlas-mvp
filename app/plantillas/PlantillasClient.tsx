@@ -35,16 +35,36 @@ const GROUPS: Group[] = [
   },
 ];
 
+// ✅ Extras con IMAGEN desde /public (las tienes en /public directamente)
 const EXTRAS = [
-  { key: "beca", title: "Beca (banda)", subtitle: "Para alumnos y/o profes", icon: "🎓" },
-  { key: "recuerdo", title: "Fotos de recuerdo", subtitle: "Pack por alumno", icon: "📸" },
-  { key: "taza", title: "Taza personalizada", subtitle: "Con foto / nombre", icon: "☕" },
-  { key: "sobre", title: "Sobre reforzado", subtitle: "Con nombre", icon: "✉️" },
+  {
+    key: "beca",
+    title: "Beca (banda)",
+    subtitle: "Para alumnos y/o profes",
+    desc: "Banda personalizada con el nombre del cole/grupo. Queda brutal en la foto final.",
+    img: "/extra-beca.webp",
+  },
+  {
+    key: "recuerdo",
+    title: "Fotos de recuerdo",
+    subtitle: "Pack por alumno",
+    desc: "Fotos individuales para las familias. Se calcula por alumno.",
+    img: "/extra-fotos.webp",
+  },
+  {
+    key: "taza",
+    title: "Taza personalizada",
+    subtitle: "Con foto / nombre",
+    desc: "Un detalle perfecto para regalar. Personalizada con foto y nombre.",
+    img: "/extra-taza.webp",
+  },
 ];
 
 function presupuestoWithTpl(open: Plantilla, groupLabel: string) {
   return `/presupuesto?tpl=${encodeURIComponent(open.src)}&cat=${encodeURIComponent(groupLabel)}`;
 }
+
+type ExtraItem = (typeof EXTRAS)[number];
 
 export default function PlantillasClient({
   data,
@@ -71,6 +91,7 @@ export default function PlantillasClient({
   }, [data, group]);
 
   const [open, setOpen] = useState<Plantilla | null>(null);
+  const [openExtra, setOpenExtra] = useState<ExtraItem | null>(null);
 
   // ✅ NUEVO FLUJO: presupuesto decide por provincia, aquí no forzamos tipo
   const presupuestoBase = "/presupuesto";
@@ -212,17 +233,46 @@ export default function PlantillasClient({
             </div>
           </div>
 
-          {/* Extras opcionales (sin botones) */}
+          {/* ✅ Extras opcionales con imagen + click para ampliar */}
           <div className="card">
             <div style={{ fontWeight: 900, marginBottom: 8 }}>Extras opcionales</div>
 
             <div style={extrasCarousel} aria-label="Carrusel de extras">
               {EXTRAS.map((x) => (
-                <div key={x.key} style={extraSlide}>
-                  <div style={extraIcon}>{x.icon}</div>
-                  <div style={{ fontWeight: 900, marginTop: 8 }}>{x.title}</div>
-                  <div style={{ color: "var(--muted)", marginTop: 6, lineHeight: 1.45, fontSize: 13 }}>{x.subtitle}</div>
-                </div>
+                <button
+                  key={x.key}
+                  type="button"
+                  onClick={() => setOpenExtra(x)}
+                  style={extraSlideBtn}
+                  aria-label={`Ver ${x.title}`}
+                >
+                  <div
+                    style={{
+                      width: "100%",
+                      height: 120,
+                      borderRadius: 14,
+                      overflow: "hidden",
+                      border: "1px solid var(--border)",
+                      background: "white",
+                    }}
+                  >
+                    <img
+                      src={x.img}
+                      alt={x.title}
+                      loading="lazy"
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                      onError={(e) => {
+                        // fallback limpio si alguna imagen no carga
+                        (e.currentTarget as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ fontWeight: 900, marginTop: 10, textAlign: "left" }}>{x.title}</div>
+                  <div style={{ color: "var(--muted)", marginTop: 6, lineHeight: 1.45, fontSize: 13, textAlign: "left" }}>
+                    {x.subtitle}
+                  </div>
+                </button>
               ))}
             </div>
 
@@ -237,7 +287,7 @@ export default function PlantillasClient({
         <b>Tip:</b> abre una plantilla, mírala grande, y elige la que más encaje. Cero dramas, cero laberintos.
       </div>
 
-      {/* Lightbox */}
+      {/* Lightbox plantilla */}
       {open ? (
         <div
           onClick={() => setOpen(null)}
@@ -290,6 +340,58 @@ export default function PlantillasClient({
               <Link href={presupuestoExclusivo} className="btnOutline">
                 Prefiero diseño exclusivo
               </Link>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* ✅ Lightbox extra */}
+      {openExtra ? (
+        <div
+          onClick={() => setOpenExtra(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 18,
+            zIndex: 9999,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "min(860px, 96vw)",
+              background: "white",
+              borderRadius: 16,
+              padding: 14,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+              <div style={{ fontWeight: 900 }}>{openExtra.title}</div>
+              <button type="button" className="btnOutline" onClick={() => setOpenExtra(null)}>
+                Cerrar
+              </button>
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <img
+                src={openExtra.img}
+                alt={openExtra.title}
+                style={{
+                  width: "100%",
+                  maxHeight: "70vh",
+                  objectFit: "contain",
+                  borderRadius: 12,
+                  background: "#f3f3f3",
+                }}
+              />
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <div style={{ color: "var(--muted)", lineHeight: 1.55 }}>{openExtra.desc}</div>
             </div>
           </div>
         </div>
@@ -356,7 +458,7 @@ const extrasCarousel: React.CSSProperties = {
   scrollSnapType: "x mandatory",
 };
 
-const extraSlide: React.CSSProperties = {
+const extraSlideBtn: React.CSSProperties = {
   minWidth: 220,
   maxWidth: 220,
   flex: "0 0 auto",
@@ -365,17 +467,6 @@ const extraSlide: React.CSSProperties = {
   padding: 12,
   background: "white",
   scrollSnapAlign: "start",
+  cursor: "pointer",
+  textAlign: "left",
 };
-
-const extraIcon: React.CSSProperties = {
-  width: 44,
-  height: 44,
-  borderRadius: 14,
-  border: "1px solid var(--border)",
-  background: "var(--brand-soft)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: 20,
-};
-
