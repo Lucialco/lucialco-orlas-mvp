@@ -14,36 +14,44 @@ export default function ChatWidget() {
     {
       role: "assistant",
       content:
-        "Hola 👋 Soy el asistente de Lucialco Orlas. ¿Quieres info o presupuesto?",
+        "Hola 👋 Soy el asistente de Lucialco Orlas. ¿Dudas o presupuesto?",
     },
   ]);
   const [loading, setLoading] = useState(false);
 
   async function send() {
-    if (!input.trim() || loading) return;
+    const text = input.trim();
+    if (!text || loading) return;
 
-    const next = [...msgs, { role: "user", content: input }];
+    const next: Msg[] = [...msgs, { role: "user", content: text }];
     setMsgs(next);
     setInput("");
     setLoading(true);
 
-    const r = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: next }),
-    });
+    try {
+      const r = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: next }),
+      });
 
-    const data = await r.json();
+      const data = await r.json();
 
-    setMsgs([
-      ...next,
-      {
-        role: "assistant",
-        content: data.text || "No he podido responder.",
-      },
-    ]);
-
-    setLoading(false);
+      setMsgs([
+        ...next,
+        {
+          role: "assistant",
+          content: data.text || "No he podido responder.",
+        },
+      ]);
+    } catch {
+      setMsgs([
+        ...next,
+        { role: "assistant", content: "Error de conexión. Intenta de nuevo." },
+      ]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -72,6 +80,7 @@ export default function ChatWidget() {
                 </div>
               </div>
             ))}
+
             {loading && (
               <div className="text-sm text-gray-500">Escribiendo…</div>
             )}
@@ -83,7 +92,7 @@ export default function ChatWidget() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === "Enter" && send()}
               className="flex-1 border rounded-xl px-3 py-2 text-sm"
-              placeholder="Ej: presupuesto para 45 alumnos exclusiva con becas"
+              placeholder="Ej: presupuesto 45 exclusiva con beca"
             />
             <button
               onClick={send}
@@ -97,6 +106,7 @@ export default function ChatWidget() {
         <button
           onClick={() => setOpen(true)}
           className="h-12 w-12 rounded-full bg-black text-white shadow-lg"
+          aria-label="Abrir chat"
         >
           💬
         </button>
