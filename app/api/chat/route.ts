@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { retrieveContext } from "../../../lib/rag";
 import { calcQuote } from "../../../lib/pricing";
 
 export const runtime = "nodejs";
@@ -30,97 +29,57 @@ export async function POST(req: Request) {
     const lastUser =
       [...messages].reverse().find((m: any) => m?.role === "user")?.content || "";
 
-    // ✅ PRESUPUESTOS (NO dependen de OpenAI)
-    if (detectQuoteIntent(lastUser)) {
-      const alumnos = extractAlumnos(lastUser);
-      if (!alumnos) {
-        return NextResponse.json({ text: "De acuerdo. ¿Para cuántos alumnos es la orla?" });
-      }
-
-      const extras = {
-        beca: /beca/i.test(lastUser),
-        taza: /taza/i.test(lastUser),
-        sobre: /sobre/i.test(lastUser),
-      };
-
-      const tipo = detectTipo(lastUser);
-
-      if (!tipo) {
-        const p = calcQuote({ alumnos, tipo: "plantilla", extras: {} });
-        const e = calcQuote({ alumnos, tipo: "exclusiva", extras: {} });
-
-        return NextResponse.json({
-          text:
-            `Para ${alumnos} alumnos, sin extras (con IVA):\n` +
-            `- Plantilla: ${p.total.toFixed(2)} €\n` +
-            `- Exclusiva: ${e.total.toFixed(2)} €\n\n` +
-            `¿Cuál prefieres? Si me dices extras (beca, taza, sobre) lo ajusto.`,
-        });
-      }
-
-      const q = calcQuote({ alumnos, tipo, extras });
-
+    // Respuesta base si no pide presupuesto
+    if (!detectQuoteIntent(lastUser)) {
       return NextResponse.json({
         text:
-          `Presupuesto estimado (con IVA):\n` +
-          `- Alumnos: ${q.alumnos}\n` +
-          `- Tipo: ${q.tipo}\n` +
-          `- TOTAL: ${q.total.toFixed(2)} €\n\n` +
-          `Si quieres, lo gestionamos por WhatsApp: ${WHATSAPP}`,
-      });
-    }
-
-    // ✅ DUDAS (RAG + IA si hay key)
-    const { context } = await retrieveContext(lastUser, 6);
-
-    const key = process.env.OPENAI_API_KEY;
-
-    // Si no hay IA o no hay contexto -> WhatsApp (sin inventar)
-    if (!key || !context) {
-      return NextResponse.json({
-        text:
-          `No dispongo de esa información confirmada ahora mismo.\n` +
+          "Hola. ¿En qué puedo ayudarte?\n" +
+          "Puedo preparar un presupuesto (ej: “presupuesto orla 30 alumnos”) o derivarte a WhatsApp si hace falta.\n" +
           `WhatsApp: ${WHATSAPP}`,
       });
     }
 
-    const input = [
-      {
-        role: "system",
-        content:
-          `Eres el asistente de Lucialco Orlas.\n` +
-          `Estilo: español natural y profesional, sin jerga.\n` +
-          `Reglas: responde SOLO con el contexto. Si falta un dato, pregunta 1-2 cosas concretas. Si no puedes confirmarlo, deriva a WhatsApp (${WHATSAPP}).`,
-      },
-      { role: "user", content: `Pregunta: ${lastUser}\n\nContexto:\n${context}` },
-    ];
+    // Presupuesto
+    const alumnos = extractAlumnos(lastUser);
+    if (!alumnos) {
+      return NextResponse.json({ text: "De acuerdo. ¿Para cuántos alumnos es la orla?" });
+    }
 
-    const r = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gpt-4.1-mini",
-        input,
-        temperature: 0.2,
-      }),
-    });
+    const extras = {
+      beca: /beca/i.test(lastUser),
+      taza: /taza/i.test(lastUser),
+      sobre: /sobre/i.test(lastUser),
+    };
 
-    if (!r.ok) {
+    const tipo = detectTipo(lastUser);
+
+    // Si no especifica tipo, damos ambas opciones
+    if (!tipo) {
+      const p = calcQuote({ alumnos, tipo: "plantilla", extras: {} });
+      const e = calcQuote({ alumnos, tipo: "exclusiva", extras: {} });
+
       return NextResponse.json({
-        text: `Ahora mismo no puedo completar la respuesta desde la web. WhatsApp: ${WHATSAPP}`,
+        text:
+          `Para ${alumnos} alumnos, sin extras (con IVA):\n` +
+          `- Plantilla: ${p.total.toFixed(2)} €\n` +
+          `- Exclusiva: ${e.total.toFixed(2)} €\n\n` +
+          "¿Cuál prefieres? Si me indicas extras (beca, taza, sobre), lo ajusto.",
       });
     }
 
-    const data = await r.json();
+    const q = calcQuote({ alumnos, tipo, extras });
+
     return NextResponse.json({
-      text: data.output_text || `WhatsApp: ${WHATSAPP}`,
+      text:
+        `Presupuesto estimado (con IVA):\n` +
+        `- Alumnos: ${q.alumnos}\n` +
+        `- Tipo: ${q.tipo}\n` +
+        `- TOTAL: ${q.total.toFixed(2)} €\n\n` +
+        `Si quieres, lo gestionamos por WhatsApp: ${WHATSAPP}`,
     });
   } catch {
     return NextResponse.json({
-      text: `Ha ocurrido un error al procesar tu consulta. WhatsApp: ${WHATSAPP}`,
+      text: `Ha ocurrido un error. WhatsApp: ${WHATSAPP}`,
     });
   }
 }
