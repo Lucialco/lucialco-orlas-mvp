@@ -1,47 +1,56 @@
+export type ProvinciaZona = "MADRID_TOLEDO" | "OTRAS";
+
+export type QuoteTipo = "plantilla" | "exclusiva";
+
 export type QuoteInput = {
-  alumnos: number;
-  tipo: "plantilla" | "exclusiva";
-  extras?: {
-    beca?: boolean;
-    taza?: boolean;
-    sobre?: boolean;
-  };
+  alumnos: number;                 // nº alumnos (orlas)
+  tipo: QuoteTipo;                 // plantilla / exclusiva
+  zona: ProvinciaZona;             // Madrid/Toledo vs otras
+  envio?: boolean;                 // si aplica transporte
 };
 
 const IVA = 0.21;
 
-// ⚠️ Ajusta estos precios a los reales de Lucialco
-const PRICE = {
-  plantilla: 12.5,
-  exclusiva: 14.5,
-  extras: {
-    beca: 1.2,
-    taza: 6.9,
-    sobre: 0.8,
+// Precios SIN IVA por alumno
+const PRICE_PER_ALUMNO = {
+  MADRID_TOLEDO: {
+    plantilla: 11.5,
+    exclusiva: 15.0,
   },
-};
+  OTRAS: {
+    plantilla: 9.0,
+    exclusiva: 10.5,
+  },
+} as const;
+
+// Transporte SIN IVA (pago único por pedido)
+const SHIPPING = 15.0;
 
 export function calcQuote(input: QuoteInput) {
-  const { alumnos, tipo, extras = {} } = input;
+  const { alumnos, tipo, zona, envio = true } = input;
 
-  const base = alumnos * PRICE[tipo];
+  const unit = PRICE_PER_ALUMNO[zona][tipo];
+  const base = alumnos * unit;
 
-  const extrasTotal =
-    (extras.beca ? alumnos * PRICE.extras.beca : 0) +
-    (extras.taza ? alumnos * PRICE.extras.taza : 0) +
-    (extras.sobre ? alumnos * PRICE.extras.sobre : 0);
+  const shipping = envio ? SHIPPING : 0;
 
-  const subtotal = base + extrasTotal;
+  const subtotal = base + shipping;
   const iva = subtotal * IVA;
   const total = subtotal + iva;
+
+  const perAlumno = total / alumnos;
 
   return {
     alumnos,
     tipo,
-    base,
-    extrasTotal,
-    subtotal,
+    zona,
+    unit,        // €/alumno sin IVA
+    base,        // sin IVA
+    shipping,    // sin IVA
+    subtotal,    // sin IVA
     iva,
-    total,
+    total,       // con IVA
+    perAlumno,   // con IVA
   };
 }
+
