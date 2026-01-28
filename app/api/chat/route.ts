@@ -4,6 +4,8 @@ import { calcQuote } from "../../../lib/pricing";
 export const runtime = "nodejs";
 const WHATSAPP = "https://wa.me/34606849914";
 
+/* ----------------- Utils ----------------- */
+
 function extractAlumnos(text: string): number | null {
   const m = text.match(/(\d{1,4})/);
   if (!m) return null;
@@ -18,11 +20,15 @@ function detectTipo(text: string): "plantilla" | "exclusiva" | null {
 }
 
 function detectQuoteIntent(text: string): boolean {
-  return /(presupuesto|precio|cu[aá]nto cuesta|cu[aá]nto vale|coste)/i.test(text) &&
-    /(orla|alumn|niñ|estudiant)/i.test(text);
+  return (
+    /(presupuesto|precio|cu[aá]nto cuesta|cu[aá]nto vale|coste)/i.test(text) &&
+    /(orla|alumn|niñ|estudiant)/i.test(text)
+  );
 }
 
-async function callOpenAI(text: string) {
+/* ----------------- OpenAI ----------------- */
+
+async function callOpenAI(text: string, firstMessage = false) {
   const key = process.env.OPENAI_API_KEY;
   if (!key) return null;
 
@@ -37,14 +43,20 @@ async function callOpenAI(text: string) {
       messages: [
         {
           role: "system",
-          content:
-            `Eres el asistente de Lucialco Orlas.\n` +
-            `Tono: español natural, profesional y amable.\n` +
-            `Reglas:\n` +
-            `- Si te saludan, saluda y pregunta en qué puedes ayudar.\n` +
-            `- Si falta información para responder, pregunta 1-2 datos concretos.\n` +
-            `- Si no puedes confirmarlo, deriva a WhatsApp: ${WHATSAPP}.\n` +
-            `- No uses jerga tipo “se me va la pinza”.`,
+          content: `
+Eres el asistente de Lucialco Orlas.
+
+Reglas:
+- Español profesional y natural.
+- NO repitas mensajes de bienvenida.
+- Responde directamente.
+- Si piden presupuesto, pregunta alumnos y extras.
+- Si preguntan por fotos, explica cómo deben hacerse.
+- Si no hay datos suficientes, pide solo lo necesario.
+- Si no puedes ayudar, deriva a WhatsApp.
+
+Solo saluda si es el primer mensaje.
+          `,
         },
         { role: "user", content: text },
       ],
@@ -53,46 +65,42 @@ async function callOpenAI(text: string) {
   });
 
   if (!r.ok) return null;
+
   const data = await r.json();
   return data?.choices?.[0]?.message?.content || null;
 }
 
-function fallbackWelcome() {
-  return (
-    "Hola 😊 Soy el asistente de Lucialco Orlas.\n\n" +
-    "Puedo ayudarte con:\n" +
-    "• presupuestos\n" +
-    "• proceso de fotos\n" +
-    "• tipos de orla\n" +
-    "• extras\n" +
-    "• plazos\n\n" +
-    "¿Qué necesitas?"
-  );
-}
+/* ----------------- API ----------------- */
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const messages = Array.isArray(body?.messages) ? body.messages : [];
+
     const lastUser =
       [...messages].reverse().find((m: any) => m?.role === "user")?.content || "";
 
-    const text = String(lastUser || "").trim();
+    const isFirstUserMessage =
+      messages.filter((m: any) => m.role === "user").length <= 1;
 
-    // Presupuestos locales
-    if (detectQuoteIntent(text)) {
-      const alumnos = extractAlumnos(text);
+    /* ---------- Presupuestos locales ---------- */
+
+    if (detectQuoteIntent(lastUser)) {
+      const alumnos = extractAlumnos(lastUser);
+
       if (!alumnos) {
-        return NextResponse.json({ text: "De acuerdo. ¿Para cuántos alumnos es la orla?" });
+        return NextResponse.json({
+          text: "Perfecto. ¿Para cuántos alumnos es la orla?",
+        });
       }
 
       const extras = {
-        beca: /beca/i.test(text),
-        taza: /taza/i.test(text),
-        sobre: /sobre/i.test(text),
+        beca: /beca/i.test(lastUser),
+        taza: /taza/i.test(lastUser),
+        sobre: /sobre/i.test(lastUser),
       };
 
-      const tipo = detectTipo(text);
+      const tipo = detectTipo(lastUser);
 
       if (!tipo) {
         const p = calcQuote({ alumnos, tipo: "plantilla", extras: {} });
@@ -101,9 +109,9 @@ export async function POST(req: Request) {
         return NextResponse.json({
           text:
             `Para ${alumnos} alumnos (IVA incluido):\n` +
-            `- Plantilla: ${p.total.toFixed(2)} €\n` +
-            `- Exclusiva: ${e.total.toFixed(2)} €\n\n` +
-            "¿Cuál prefieres?",
+            `• Plantilla: ${p.total.toFixed(2)} €\n` +
+            `• Exclusiva: ${e.total.toFixed(2)} €\n\n` +
+            `¿Cuál prefieres?`,
         });
       }
 
@@ -111,25 +119,31 @@ export async function POST(req: Request) {
 
       return NextResponse.json({
         text:
-          `TOTAL estimado: ${q.total.toFixed(2)} € (IVA incluido)\n\n` +
-          `Si quieres, lo gestionamos por WhatsApp: ${WHATSAPP}`,
+          `Presupuesto estimado:\n` +
+          `• Alumnos: ${q.alumnos}\n` +
+          `• Tipo: ${q.tipo}\n` +
+          `• TOTAL: ${q.total.toFixed(2)} € (IVA incluido)\n\n` +
+          `Si quieres seguirlo por WhatsApp: ${WHATSAPP}`,
       });
     }
 
-    // Si es saludo o mensaje corto, damos bienvenida directa (sin IA)
-    if (!text || /^hola\b|^buenas\b|^hello\b|^hi\b/i.test(text)) {
-      return NextResponse.json({ text: fallbackWelcome() });
-    }
+    /* ---------- IA ---------- */
 
-    // IA para resto
-    const ai = await callOpenAI(text);
+    const ai = await callOpenAI(lastUser, isFirstUserMessage);
 
     if (!ai) {
-      return NextResponse.json({ text: fallbackWelcome() });
+      return NextResponse.json({
+        text:
+          "Ahora mismo no puedo responder desde la web.\n" +
+          `WhatsApp: ${WHATSAPP}`,
+      });
     }
 
     return NextResponse.json({ text: ai });
   } catch {
-    return NextResponse.json({ text: fallbackWelcome() });
+    return NextResponse.json({
+      text: `Error procesando la consulta. WhatsApp: ${WHATSAPP}`,
+    });
   }
 }
+
