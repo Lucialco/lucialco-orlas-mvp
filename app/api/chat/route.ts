@@ -4,6 +4,8 @@ import { calcQuote, type ProvinciaZona, type QuoteTipo } from "../../../lib/pric
 export const runtime = "nodejs";
 const WHATSAPP = "https://wa.me/34606849914";
 
+/* ---------------- UTILIDADES ---------------- */
+
 function norm(s: string) {
   return (s || "").trim();
 }
@@ -14,6 +16,27 @@ function isGreeting(t: string) {
 
 function detectQuoteIntent(text: string): boolean {
   return /(presupuesto|precio|cu[aá]nto cuesta|cu[aá]nto vale|coste|tarifa)/i.test(text);
+}
+
+function extractAlumnos(text: string): number | null {
+  const m = text.match(/(\d{1,4})/);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function extractAlumnosFromAll(text: string): number | null {
+  // Último número válido del hilo (1..1000)
+  const re = /(\d{1,4})/g;
+  let m: RegExpExecArray | null;
+  let last: number | null = null;
+
+  while ((m = re.exec(text)) !== null) {
+    const n = parseInt(m[1], 10);
+    if (Number.isFinite(n) && n > 0 && n <= 1000) last = n;
+  }
+
+  return last;
 }
 
 function detectTipo(text: string): QuoteTipo | null {
@@ -40,19 +63,12 @@ function detectEnvioDecision(text: string): boolean | null {
   return null;
 }
 
-function extractAlumnosFromAll(text: string): number | null {
-  // Coge el ÚLTIMO número razonable (1..1000) del texto completo del hilo
-  const matches = [...text.matchAll(/(\d{1,4})/g)].map((m) => parseInt(m[1], 10));
-  const candidates = matches.filter((n) => Number.isFinite(n) && n > 0 && n <= 1000);
-  if (!candidates.length) return null;
-  return candidates[candidates.length - 1];
-}
-
 function euro(n: number) {
   return `${n.toFixed(2)} €`;
 }
 
-/* -------------- OpenAI para dudas generales -------------- */
+/* ---------------- OPENAI (solo para dudas) ---------------- */
+
 async function callOpenAI(history: { role: "user" | "assistant"; content: string }[]) {
   const key = process.env.OPENAI_API_KEY;
   if (!key) return null;
@@ -64,7 +80,7 @@ async function callOpenAI(history: { role: "user" | "assistant"; content: string
       `Tono: español natural, profesional y amable.\n` +
       `Reglas:\n` +
       `- No inventes precios ni condiciones.\n` +
-      `- Si falta información, pregunta 1-2 cosas concretas.\n` +
+      `- Si falta información, pregunta 1-2 cosas.\n` +
       `- Si no puedes confirmarlo, deriva a WhatsApp: ${WHATSAPP}\n` +
       `- No digas "te lo envío por WhatsApp": solo ofrece el enlace.\n`,
   };
@@ -80,11 +96,13 @@ async function callOpenAI(history: { role: "user" | "assistant"; content: string
   });
 
   if (!r.ok) return null;
+
   const data = await r.json();
   return data?.choices?.[0]?.message?.content?.trim() || null;
 }
 
-/* ------------------------- API -------------------------- */
+/* ---------------- API ---------------- */
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -96,21 +114,22 @@ export async function POST(req: Request) {
 
     const lastUser = norm(userMsgs[userMsgs.length - 1] || "");
 
-    // Saludo
+    // Saludo inicial
     if (!lastUser || isGreeting(lastUser)) {
       return NextResponse.json({
         text:
           "Hola 😊 Soy el asistente de Lucialco Orlas.\n\n" +
-          "¿Quieres presupuesto o tienes una duda del proceso?",
+          "Si quieres presupuesto, lo vemos paso a paso.\n" +
+          "Primero: ¿el colegio está en Madrid/Toledo o en otra provincia?",
       });
     }
 
-    // ======= MODO PRESUPUESTO (DETERMINISTA + USA HISTORIAL) =======
+    // ======= MODO PRESUPUESTO =======
     const fullUserText = userMsgs.slice(-12).join(" \n");
     const inQuoteMode = detectQuoteIntent(fullUserText) || /presupuesto/i.test(fullUserText);
 
     if (inQuoteMode) {
-      // ORDEN FIJO: Provincia -> Alumnos -> Tipo -> (Envío/Recogida si Madrid/Toledo)
+      // ORDEN: Provincia -> Alumnos -> Tipo -> Envío (si Madrid/Toledo)
       const zona = detectZona(fullUserText);
       if (!zona) {
         return NextResponse.json({
@@ -132,11 +151,9 @@ export async function POST(req: Request) {
 
       const envioDecision = detectEnvioDecision(fullUserText);
 
-      // En otras provincias SIEMPRE envío 15€ por pedido.
-      // En Madrid/Toledo preguntamos si no lo especifican.
       if (zona === "MADRID_TOLEDO" && envioDecision === null) {
         return NextResponse.json({
-          text: "¿Lo queréis con envío (transporte 15€ por pedido) o lo recogéis en mano?",
+          text: "¿Lo queréis con envío (15€ por pedido) o lo recogéis en mano?",
         });
       }
 
@@ -185,4 +202,3 @@ export async function POST(req: Request) {
     });
   }
 }
-
