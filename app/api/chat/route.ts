@@ -4,7 +4,7 @@ import { calcQuote } from "../../../lib/pricing";
 export const runtime = "nodejs";
 const WHATSAPP = "https://wa.me/34606849914";
 
-/* ----------------- Utils ----------------- */
+/* ---------------- UTILIDADES ---------------- */
 
 function extractAlumnos(text: string): number | null {
   const m = text.match(/(\d{1,4})/);
@@ -26,9 +26,9 @@ function detectQuoteIntent(text: string): boolean {
   );
 }
 
-/* ----------------- OpenAI ----------------- */
+/* ---------------- OPENAI ---------------- */
 
-async function callOpenAI(text: string, firstMessage = false) {
+async function callOpenAI(text: string) {
   const key = process.env.OPENAI_API_KEY;
   if (!key) return null;
 
@@ -40,6 +40,7 @@ async function callOpenAI(text: string, firstMessage = false) {
     },
     body: JSON.stringify({
       model: "gpt-4.1-mini",
+      temperature: 0.2,
       messages: [
         {
           role: "system",
@@ -51,26 +52,24 @@ Reglas:
 - NO repitas mensajes de bienvenida.
 - Responde directamente.
 - Si piden presupuesto, pregunta alumnos y extras.
-- Si preguntan por fotos, explica cómo deben hacerse.
-- Si no hay datos suficientes, pide solo lo necesario.
+- Si preguntan por fotos, explica el proceso.
+- Si no tienes datos suficientes, pide lo justo.
 - Si no puedes ayudar, deriva a WhatsApp.
-
-Solo saluda si es el primer mensaje.
-          `,
+`,
         },
         { role: "user", content: text },
       ],
-      temperature: 0.2,
     }),
   });
 
   if (!r.ok) return null;
 
   const data = await r.json();
-  return data?.choices?.[0]?.message?.content || null;
+
+  return data?.choices?.[0]?.message?.content?.trim() || null;
 }
 
-/* ----------------- API ----------------- */
+/* ---------------- API ---------------- */
 
 export async function POST(req: Request) {
   try {
@@ -80,17 +79,14 @@ export async function POST(req: Request) {
     const lastUser =
       [...messages].reverse().find((m: any) => m?.role === "user")?.content || "";
 
-    const isFirstUserMessage =
-      messages.filter((m: any) => m.role === "user").length <= 1;
-
-    /* ---------- Presupuestos locales ---------- */
+    /* ---------- PRESUPUESTOS LOCALES ---------- */
 
     if (detectQuoteIntent(lastUser)) {
       const alumnos = extractAlumnos(lastUser);
 
       if (!alumnos) {
         return NextResponse.json({
-          text: "Perfecto. ¿Para cuántos alumnos es la orla?",
+          text: "¿Para cuántos alumnos es la orla?",
         });
       }
 
@@ -108,7 +104,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({
           text:
-            `Para ${alumnos} alumnos (IVA incluido):\n` +
+            `Para ${alumnos} alumnos (con IVA):\n` +
             `• Plantilla: ${p.total.toFixed(2)} €\n` +
             `• Exclusiva: ${e.total.toFixed(2)} €\n\n` +
             `¿Cuál prefieres?`,
@@ -119,31 +115,34 @@ export async function POST(req: Request) {
 
       return NextResponse.json({
         text:
-          `Presupuesto estimado:\n` +
+          `Presupuesto estimado:\n\n` +
           `• Alumnos: ${q.alumnos}\n` +
           `• Tipo: ${q.tipo}\n` +
-          `• TOTAL: ${q.total.toFixed(2)} € (IVA incluido)\n\n` +
-          `Si quieres seguirlo por WhatsApp: ${WHATSAPP}`,
+          `• Total: ${q.total.toFixed(2)} € (IVA incluido)\n\n` +
+          `¿Quieres añadir algún extra?`,
       });
     }
 
-    /* ---------- IA ---------- */
+    /* ---------- IA GENERAL ---------- */
 
-    const ai = await callOpenAI(lastUser, isFirstUserMessage);
+    const ai = await callOpenAI(lastUser);
 
     if (!ai) {
       return NextResponse.json({
         text:
-          "Ahora mismo no puedo responder desde la web.\n" +
-          `WhatsApp: ${WHATSAPP}`,
+          "Ahora mismo no puedo ayudarte con esto desde la web.\n" +
+          `Puedes escribirnos por WhatsApp: ${WHATSAPP}`,
       });
     }
 
     return NextResponse.json({ text: ai });
-  } catch {
+  } catch (err) {
+    console.error("CHAT ERROR:", err);
+
     return NextResponse.json({
-      text: `Error procesando la consulta. WhatsApp: ${WHATSAPP}`,
+      text:
+        "Ha ocurrido un error procesando la consulta.\n" +
+        `WhatsApp: ${WHATSAPP}`,
     });
   }
 }
-
