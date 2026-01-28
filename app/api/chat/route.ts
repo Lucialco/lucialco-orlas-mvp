@@ -4,8 +4,6 @@ import { calcQuote } from "../../../lib/pricing";
 export const runtime = "nodejs";
 const WHATSAPP = "https://wa.me/34606849914";
 
-/* ---------------- UTILIDADES ---------------- */
-
 function extractAlumnos(text: string): number | null {
   const m = text.match(/(\d{1,4})/);
   if (!m) return null;
@@ -26,11 +24,22 @@ function detectQuoteIntent(text: string): boolean {
   );
 }
 
-/* ---------------- OPENAI ---------------- */
-
-async function callOpenAI(text: string) {
+async function callOpenAI(history: { role: "user" | "assistant"; content: string }[]) {
   const key = process.env.OPENAI_API_KEY;
   if (!key) return null;
+
+  const system = {
+    role: "system" as const,
+    content: `
+Eres el asistente de Lucialco Orlas.
+Tono: español natural, profesional y cercano (sin jerga).
+Reglas:
+- Usa el historial para mantener el contexto.
+- No repitas el saludo ni la lista de servicios en cada respuesta.
+- Si falta información, pregunta 1–2 datos concretos.
+- Si no puedes confirmarlo, deriva a WhatsApp: ${WHATSAPP}.
+`,
+  };
 
   const r = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -41,53 +50,29 @@ async function callOpenAI(text: string) {
     body: JSON.stringify({
       model: "gpt-4.1-mini",
       temperature: 0.2,
-      messages: [
-        {
-          role: "system",
-          content: `
-Eres el asistente de Lucialco Orlas.
-
-Reglas:
-- Español profesional y natural.
-- NO repitas mensajes de bienvenida.
-- Responde directamente.
-- Si piden presupuesto, pregunta alumnos y extras.
-- Si preguntan por fotos, explica el proceso.
-- Si no tienes datos suficientes, pide lo justo.
-- Si no puedes ayudar, deriva a WhatsApp.
-`,
-        },
-        { role: "user", content: text },
-      ],
+      messages: [system, ...history],
     }),
   });
 
   if (!r.ok) return null;
 
   const data = await r.json();
-
   return data?.choices?.[0]?.message?.content?.trim() || null;
 }
-
-/* ---------------- API ---------------- */
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const messages = Array.isArray(body?.messages) ? body.messages : [];
+    const incoming = Array.isArray(body?.messages) ? body.messages : [];
 
     const lastUser =
-      [...messages].reverse().find((m: any) => m?.role === "user")?.content || "";
+      [...incoming].reverse().find((m: any) => m?.role === "user")?.content || "";
 
-    /* ---------- PRESUPUESTOS LOCALES ---------- */
-
-    if (detectQuoteIntent(lastUser)) {
+    // 1) Presupuestos determinísticos (sin IA)
+    if (detectQuoteIntent(lastUser) || /presupuesto/i.test(lastUser)) {
       const alumnos = extractAlumnos(lastUser);
-
       if (!alumnos) {
-        return NextResponse.json({
-          text: "¿Para cuántos alumnos es la orla?",
-        });
+        return NextResponse.json({ text: "Perfecto. ¿Para cuántos alumnos es la orla?" });
       }
 
       const extras = {
@@ -104,7 +89,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({
           text:
-            `Para ${alumnos} alumnos (con IVA):\n` +
+            `Para ${alumnos} alumnos (IVA incluido):\n` +
             `• Plantilla: ${p.total.toFixed(2)} €\n` +
             `• Exclusiva: ${e.total.toFixed(2)} €\n\n` +
             `¿Cuál prefieres?`,
@@ -115,34 +100,30 @@ export async function POST(req: Request) {
 
       return NextResponse.json({
         text:
-          `Presupuesto estimado:\n\n` +
-          `• Alumnos: ${q.alumnos}\n` +
-          `• Tipo: ${q.tipo}\n` +
-          `• Total: ${q.total.toFixed(2)} € (IVA incluido)\n\n` +
-          `¿Quieres añadir algún extra?`,
+          `Total estimado: ${q.total.toFixed(2)} € (IVA incluido).\n` +
+          `¿Quieres añadir algún extra (beca, taza o sobre)?`,
       });
     }
 
-    /* ---------- IA GENERAL ---------- */
+    // 2) IA con historial (conversación normal)
+    const history = incoming
+      .filter((m: any) => (m?.role === "user" || m?.role === "assistant") && typeof m?.content === "string")
+      .slice(-12)
+      .map((m: any) => ({ role: m.role, content: m.content }));
 
-    const ai = await callOpenAI(lastUser);
+    const ai = await callOpenAI(history);
 
     if (!ai) {
       return NextResponse.json({
-        text:
-          "Ahora mismo no puedo ayudarte con esto desde la web.\n" +
-          `Puedes escribirnos por WhatsApp: ${WHATSAPP}`,
+        text: `Ahora mismo no puedo responder desde la web. WhatsApp: ${WHATSAPP}`,
       });
     }
 
     return NextResponse.json({ text: ai });
-  } catch (err) {
-    console.error("CHAT ERROR:", err);
-
+  } catch {
     return NextResponse.json({
-      text:
-        "Ha ocurrido un error procesando la consulta.\n" +
-        `WhatsApp: ${WHATSAPP}`,
+      text: `Error procesando la consulta. WhatsApp: ${WHATSAPP}`,
     });
   }
 }
+
