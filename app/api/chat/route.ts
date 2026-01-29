@@ -77,6 +77,13 @@ function detectTipoFromAll(all: string): Tipo {
   return null;
 }
 
+function detectTipoFromReply(last: string): Tipo {
+  const t = norm(last).trim();
+  if (t === "1" || t.includes("plantill") || t.includes("prediseñ")) return "plantilla";
+  if (t === "2" || t.includes("exclusiv") || t.includes("a medida")) return "exclusiva";
+  return detectTipoFromAll(t);
+}
+
 function detectQuoteIntent(last: string): boolean {
   const tLast = norm(last);
 
@@ -228,16 +235,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // ✅ GUÍA FOTOS
-    if (wantsPhotosGuide(last)) {
-      return NextResponse.json({
-        text:
-          "Si el colegio está fuera de Madrid o Toledo, el cole hace las fotos y nosotros nos ocupamos del resto (incluye retoque).\n\n" +
-          "Te compartimos la guía completa para hacer las fotos correctamente.\n" +
-          `Si quieres, Lucía te lo explica y revisa dudas por WhatsApp: ${WHATSAPP}`,
-      });
-    }
-
     // ✅ GUÍA WETRANSFER
     if (wantsWeTransferGuide(last)) {
       return NextResponse.json({
@@ -249,6 +246,16 @@ export async function POST(req: Request) {
           "4) Pon tu email para recibir confirmación\n" +
           "5) Enviar\n\n" +
           `Si se complica, lo resolvéis con Lucía por WhatsApp: ${WHATSAPP}`,
+      });
+    }
+
+    // ✅ GUÍA FOTOS
+    if (wantsPhotosGuide(last)) {
+      return NextResponse.json({
+        text:
+          "Si el colegio está fuera de Madrid o Toledo, el cole hace las fotos y nosotros nos ocupamos del resto (incluye retoque).\n\n" +
+          "Te compartimos la guía completa para hacer las fotos correctamente.\n" +
+          `Si quieres, Lucía te lo explica y revisa dudas por WhatsApp: ${WHATSAPP}`,
       });
     }
 
@@ -268,7 +275,7 @@ export async function POST(req: Request) {
         ? extractLastNumber(last)
         : extractLastNumber(all);
       const tipo = askedForTipo(lastAssistant)
-        ? detectTipoFromAll(last || all)
+        ? detectTipoFromReply(last || all)
         : detectTipoFromAll(all);
 
       if (!prov) {
