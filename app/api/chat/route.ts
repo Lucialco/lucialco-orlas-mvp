@@ -77,18 +77,17 @@ function detectTipoFromAll(all: string): Tipo {
   return null;
 }
 
-function detectQuoteIntent(last: string, all: string): boolean {
+function detectQuoteIntent(last: string): boolean {
   const tLast = norm(last);
-  const tAll = norm(all);
 
   // botones
   if (tLast === "presupuesto rápido" || tLast === "presupuesto rapido") return true;
 
   // intención de presupuesto
   const intent = /(presupuesto|precio|cu[aá]nto|cuanto|coste|costos|tarifa)/i.test(tLast);
-  const aboutOrlas = /(orla|orlas|alumn|niñ|colegio|clase|curso)/i.test(tAll);
+  const aboutOrlas = /(orla|orlas|alumn|niñ|colegio|clase|curso)/i.test(tLast);
 
-  return intent || aboutOrlas && /(presupuesto|precio|cu[aá]nto|cuanto|coste|tarifa)/i.test(tAll);
+  return intent || aboutOrlas && /(presupuesto|precio|cu[aá]nto|cuanto|coste|tarifa)/i.test(tLast);
 }
 
 function askedForProvincia(text: string): boolean {
@@ -245,7 +244,7 @@ export async function POST(req: Request) {
 
     // ✅ PRESUPUESTOS (DETERMINISTA, SIN INVENTAR)
     const inQuoteFlow =
-      detectQuoteIntent(last, all) ||
+      detectQuoteIntent(last) ||
       askedForProvincia(lastAssistant) ||
       askedForAlumnos(lastAssistant) ||
       askedForTipo(lastAssistant);
