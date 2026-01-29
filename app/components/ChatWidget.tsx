@@ -326,7 +326,7 @@ export default function ChatWidget() {
               </button>
               <button
                 style={styles.quickBtn}
-                onClick={() => send("Presupuesto para 30 alumnos")}
+                onClick={() => send("Presupuesto rápido")}
               >
                 Presupuesto rápido
               </button>

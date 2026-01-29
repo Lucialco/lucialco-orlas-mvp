@@ -9,6 +9,15 @@ export type QuoteInput = {
   envio?: boolean;                 // si aplica transporte
 };
 
+export type ExtraKey = "beca" | "taza" | "sobre" | "fotos_recuerdo";
+
+export const EXTRA_PRICES: Record<ExtraKey, number> = {
+  beca: 5,
+  taza: 9.5,
+  sobre: 3,
+  fotos_recuerdo: 4.5,
+};
+
 const IVA = 0.21;
 
 // Precios SIN IVA por alumno
@@ -54,3 +63,36 @@ export function calcQuote(input: QuoteInput) {
   };
 }
 
+export function calcExtras(alumnos: number, extras: ExtraKey[]) {
+  const items = extras.map((key) => {
+    const unit = EXTRA_PRICES[key];
+    return {
+      key,
+      unit,
+      total: unit * alumnos,
+    };
+  });
+
+  const total = items.reduce((acc, item) => acc + item.total, 0);
+
+  return { items, total };
+}
+
+export function calcQuoteWithExtras(input: QuoteInput & { extras?: ExtraKey[] }) {
+  const baseQuote = calcQuote(input);
+  const extras = calcExtras(input.alumnos, input.extras ?? []);
+
+  const subtotal = baseQuote.base + baseQuote.shipping + extras.total;
+  const iva = subtotal * IVA;
+  const total = subtotal + iva;
+  const perAlumno = total / input.alumnos;
+
+  return {
+    ...baseQuote,
+    extras,
+    subtotal,
+    iva,
+    total,
+    perAlumno,
+  };
+}
