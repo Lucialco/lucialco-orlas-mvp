@@ -1,5 +1,11 @@
 // app/api/chat/route.ts
 import { NextResponse } from "next/server";
+import {
+  calcQuoteWithExtras,
+  EXTRA_PRICES,
+  type ExtraKey,
+  type QuoteTipo,
+} from "../../../lib/pricing";
 
 export const runtime = "nodejs";
 const WHATSAPP = "https://wa.me/34606849914";
@@ -57,7 +63,7 @@ function extractLastNumber(text: string): number | null {
 }
 
 type Provincia = "madrid_toledo" | "otra" | null;
-type Tipo = "plantilla" | "exclusiva" | null;
+type Tipo = QuoteTipo | null;
 
 function detectProvinciaFromAll(all: string): Provincia {
   const t = norm(all);
@@ -128,6 +134,11 @@ function askedForTipo(text: string): boolean {
   return /qu[eé] opci[oó]n prefieres|plantilla|exclusiva|diseñ(o|o) desde cero/.test(t);
 }
 
+function askedForExtras(text: string): boolean {
+  const t = norm(text);
+  return /extras opcionales|extras quieres|quieres extras|extras te interesan/.test(t);
+}
+
 function wantsPhotosGuide(last: string): boolean {
   const t = norm(last);
   return t === "fotos recomendadas" || /(fotos|c[oó]mo hacer las fotos|gu[ií]a.*fotos|manual.*fotos)/i.test(t);
@@ -148,39 +159,61 @@ function isGreeting(last: string): boolean {
   return /^(hola|buenas|hello|hey|holi|buenos d[ií]as|buenas tardes|buenas noches)\b/.test(t);
 }
 
-// ===================== pricing rules (REAL, no invents) =====================
-// Madrid/Toledo:
-// - Exclusiva: 15 € / alumno sin IVA
-// - Plantilla: 11.5 € / alumno sin IVA
-//
-// Otras provincias:
-// - Plantilla: 9 € / alumno sin IVA
-// - Exclusiva: 10.5 € / alumno sin IVA
-// - Transporte: 15 € + IVA por pedido (1..100 orlas igual)
-
-function pricePerAlumno(prov: Provincia, tipo: Tipo): number | null {
-  if (!prov || !tipo) return null;
-  if (prov === "madrid_toledo") return tipo === "exclusiva" ? 15 : 11.5;
-  return tipo === "exclusiva" ? 10.5 : 9;
-}
-
-function shippingBase(prov: Provincia): number {
-  return prov === "otra" ? 15 : 0;
-}
+const EXTRA_OPTIONS: Array<{ key: ExtraKey; label: string }> = [
+  { key: "beca", label: "Beca de graduación personalizada" },
+  { key: "taza", label: "Taza con foto" },
+  { key: "sobre", label: "Sobre reforzado con nombre" },
+  { key: "fotos_recuerdo", label: "Fotos de recuerdo" },
+];
 
 function eur(n: number) {
   return n.toFixed(2).replace(".", ",");
 }
 
-function presupuestoTexto(prov: Provincia, alumnos: number, tipo: Tipo) {
-  const unit = pricePerAlumno(prov, tipo)!;
-  const envio = shippingBase(prov);
-  const base = alumnos * unit + envio;
-  const iva = base * 0.21;
-  const total = base + iva;
+function parseExtrasFromReply(reply: string): ExtraKey[] | null {
+  const t = norm(reply).trim();
+  if (!t) return null;
 
+  if (/\b(ninguno|ninguna|no quiero|sin extras|no)\b/i.test(t)) return [];
+
+  const keys = new Set<ExtraKey>();
+
+  if (/beca/.test(t)) keys.add("beca");
+  if (/taza/.test(t)) keys.add("taza");
+  if (/sobre/.test(t)) keys.add("sobre");
+  if (/fotos? de recuerdo|recuerdo/.test(t)) keys.add("fotos_recuerdo");
+
+  const matches = t.match(/[1-4]/g) ?? [];
+  for (const match of matches) {
+    if (match === "1") keys.add("beca");
+    if (match === "2") keys.add("taza");
+    if (match === "3") keys.add("sobre");
+    if (match === "4") keys.add("fotos_recuerdo");
+  }
+
+  return keys.size > 0 ? Array.from(keys) : null;
+}
+
+function extrasPrompt() {
+  const lines: string[] = [];
+  lines.push("¿Quieres extras opcionales? Puedes responder con números (ej: 1,3) o con “ninguno”.");
+  EXTRA_OPTIONS.forEach((extra, idx) => {
+    lines.push(`${idx + 1}) ${extra.label} (+${eur(EXTRA_PRICES[extra.key])} € / alumno)`);
+  });
+  return lines.join("\n");
+}
+
+function presupuestoTexto(prov: Provincia, alumnos: number, tipo: Tipo, extras: ExtraKey[]) {
   const provTxt = prov === "madrid_toledo" ? "Madrid / Toledo" : "Otra provincia";
   const tipoTxt = tipo === "exclusiva" ? "Diseño exclusivo (a medida)" : "Orla prediseñada (plantilla)";
+  const zona = prov === "madrid_toledo" ? "MADRID_TOLEDO" : "OTRAS";
+  const quote = calcQuoteWithExtras({
+    alumnos,
+    tipo,
+    zona,
+    envio: prov === "otra",
+    extras,
+  });
 
   const lines: string[] = [];
   lines.push(`📋 Presupuesto estimado (orlas por alumno)`);
@@ -188,12 +221,25 @@ function presupuestoTexto(prov: Provincia, alumnos: number, tipo: Tipo) {
   lines.push(`- Alumnos: ${alumnos}`);
   lines.push(`- Tipo: ${tipoTxt}`);
   lines.push(``);
-  lines.push(`💶 Precio por alumno (sin IVA): ${eur(unit)} €`);
-  if (envio > 0) lines.push(`🚚 Transporte (sin IVA): ${eur(envio)} € (pago único por pedido)`);
+  lines.push(`💶 Precio por alumno (sin IVA): ${eur(quote.unit)} €`);
+  if (quote.shipping > 0) lines.push(`🚚 Transporte (sin IVA): ${eur(quote.shipping)} € (pago único por pedido)`);
   lines.push(``);
-  lines.push(`Subtotal (sin IVA): ${eur(base)} €`);
-  lines.push(`IVA (21%): ${eur(iva)} €`);
-  lines.push(`✅ TOTAL (con IVA): ${eur(total)} €`);
+
+  if (extras.length > 0) {
+    lines.push(`✨ Extras opcionales (sin IVA):`);
+    quote.extras.items.forEach((item) => {
+      const label = EXTRA_OPTIONS.find((extra) => extra.key === item.key)?.label ?? item.key;
+      lines.push(`- ${label}: ${eur(item.unit)} € / alumno → ${eur(item.total)} €`);
+    });
+    lines.push(``);
+  } else {
+    lines.push(`✨ Extras opcionales: ninguno`);
+    lines.push(``);
+  }
+
+  lines.push(`Subtotal (sin IVA): ${eur(quote.subtotal)} €`);
+  lines.push(`IVA (21%): ${eur(quote.iva)} €`);
+  lines.push(`✅ TOTAL (con IVA): ${eur(quote.total)} €`);
   lines.push(``);
   lines.push(`Si quieres, Lucía te lo deja por escrito y lo cerráis por WhatsApp: ${WHATSAPP}`);
 
@@ -272,30 +318,27 @@ export async function POST(req: Request) {
       detectPriorQuoteIntent(all) ||
       askedForProvincia(lastAssistant) ||
       askedForAlumnos(lastAssistant) ||
-      askedForTipo(lastAssistant);
+      askedForTipo(lastAssistant) ||
+      askedForExtras(lastAssistant);
 
     if (inQuoteFlow) {
       const reply = norm(last).trim();
       const repliedTipoChoice = reply === "1" || reply === "2";
+      const extrasFromReply = askedForExtras(lastAssistant) ? parseExtrasFromReply(last) : null;
+      const repliedExtrasChoice = extrasFromReply !== null;
       const prov = askedForProvincia(lastAssistant)
         ? detectProvinciaFromAll(last || all)
         : detectProvinciaFromAll(all);
       const alumnos = askedForAlumnos(lastAssistant)
         ? extractLastNumber(last)
-        : repliedTipoChoice
+        : repliedTipoChoice || repliedExtrasChoice
           ? extractLastNumber(allExceptLast || all)
           : extractLastNumber(all);
-      const tipo = askedForTipo(lastAssistant) || repliedTipoChoice
+      const shouldUseTipoReply = askedForTipo(lastAssistant) || (repliedTipoChoice && !askedForExtras(lastAssistant));
+      const tipo = shouldUseTipoReply
         ? detectTipoFromReply(last || all)
-        : detectTipoFromAll(all);
-
-      if (!prov) {
-        return NextResponse.json({
-          text:
-            "Para darte presupuesto, lo primero es la provincia.\n\n" +
-            "👉 ¿El colegio está en Madrid/Toledo o en otra provincia?",
-        });
-      }
+        : detectTipoFromAll(repliedExtrasChoice ? allExceptLast || all : all);
+      const extras = extrasFromReply ?? null;
 
       if (!alumnos) {
         return NextResponse.json({
@@ -312,8 +355,22 @@ export async function POST(req: Request) {
         });
       }
 
+      if (!prov) {
+        return NextResponse.json({
+          text:
+            "Para darte presupuesto necesito la provincia.\n\n" +
+            "👉 ¿El colegio está en Madrid/Toledo o en otra provincia?",
+        });
+      }
+
+      if (extras === null) {
+        return NextResponse.json({
+          text: extrasPrompt(),
+        });
+      }
+
       return NextResponse.json({
-        text: presupuestoTexto(prov, alumnos, tipo),
+        text: presupuestoTexto(prov, alumnos, tipo, extras),
       });
     }
 
