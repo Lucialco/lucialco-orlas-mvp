@@ -22,6 +22,14 @@ function lastUserText(messages: any[]): string {
   return arr.length ? arr[arr.length - 1] : "";
 }
 
+function lastAssistantText(messages: any[]): string {
+  const arr = (Array.isArray(messages) ? messages : [])
+    .filter((m) => m?.role === "assistant" && typeof m?.content === "string")
+    .map((m) => m.content.trim())
+    .filter(Boolean);
+  return arr.length ? arr[arr.length - 1] : "";
+}
+
 function norm(s: string) {
   return (s || "").toLowerCase();
 }
@@ -81,6 +89,21 @@ function detectQuoteIntent(last: string, all: string): boolean {
   const aboutOrlas = /(orla|orlas|alumn|niñ|colegio|clase|curso)/i.test(tAll);
 
   return intent || aboutOrlas && /(presupuesto|precio|cu[aá]nto|cuanto|coste|tarifa)/i.test(tAll);
+}
+
+function askedForProvincia(text: string): boolean {
+  const t = norm(text);
+  return /provincia|madrid\/toledo|otra provincia/.test(t);
+}
+
+function askedForAlumnos(text: string): boolean {
+  const t = norm(text);
+  return /cu[aá]ntos alumnos|alumnos ser[ií]a|para cu[aá]ntos alumnos/.test(t);
+}
+
+function askedForTipo(text: string): boolean {
+  const t = norm(text);
+  return /qu[eé] opci[oó]n prefieres|plantilla|exclusiva|diseñ(o|o) desde cero/.test(t);
 }
 
 function wantsPhotosGuide(last: string): boolean {
@@ -163,6 +186,7 @@ export async function POST(req: Request) {
     const messages = Array.isArray(body?.messages) ? body.messages : [];
     const last = lastUserText(messages);
     const all = joinAllUserText(messages);
+    const lastAssistant = lastAssistantText(messages);
 
     // ✅ DEBUG (para comprobar que entra en ESTE archivo)
     if (norm(last) === "/debug") {
@@ -220,10 +244,22 @@ export async function POST(req: Request) {
     }
 
     // ✅ PRESUPUESTOS (DETERMINISTA, SIN INVENTAR)
-    if (detectQuoteIntent(last, all)) {
-      const prov = detectProvinciaFromAll(all);
-      const alumnos = extractLastNumber(all);
-      const tipo = detectTipoFromAll(all);
+    const inQuoteFlow =
+      detectQuoteIntent(last, all) ||
+      askedForProvincia(lastAssistant) ||
+      askedForAlumnos(lastAssistant) ||
+      askedForTipo(lastAssistant);
+
+    if (inQuoteFlow) {
+      const prov = askedForProvincia(lastAssistant)
+        ? detectProvinciaFromAll(last || all)
+        : detectProvinciaFromAll(all);
+      const alumnos = askedForAlumnos(lastAssistant)
+        ? extractLastNumber(last)
+        : extractLastNumber(all);
+      const tipo = askedForTipo(lastAssistant)
+        ? detectTipoFromAll(last || all)
+        : detectTipoFromAll(all);
 
       if (!prov) {
         return NextResponse.json({
