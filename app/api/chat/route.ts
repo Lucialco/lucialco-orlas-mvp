@@ -1,148 +1,196 @@
 import { NextResponse } from "next/server";
-import { calcQuote, type ProvinciaZona, type QuoteTipo } from "../../../lib/pricing";
+import { calcQuote } from "../../../lib/pricing";
 
 export const runtime = "nodejs";
+
 const WHATSAPP = "https://wa.me/34606849914";
 
-/* ---------------- BASICO ---------------- */
+// ---------- helpers ----------
 
-function norm(s: string) {
-  return (s || "").trim();
+function getLastUser(messages: any[]) {
+  return [...messages]
+    .reverse()
+    .find((m) => m?.role === "user")?.content || "";
 }
 
-function isGreeting(t: string) {
-  return /^(hola|buenas|hey|hello|hi)\b/i.test(t.trim());
+function extractNumber(text: string): number | null {
+  const m = text.match(/(\d{1,4})/);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  return Number.isFinite(n) ? n : null;
 }
 
-function wantsQuote(text: string) {
-  return /(presupuesto|precio|cu[aá]nto cuesta|cu[aá]nto vale|coste|tarifa)/i.test(text);
-}
-
-/* ---------------- DETECTORES ---------------- */
-
-function detectZona(text: string): ProvinciaZona | null {
-  if (/\bmadrid\b/i.test(text) || /\btoledo\b/i.test(text)) return "MADRID_TOLEDO";
-  if (/otra|fuera|cuenca|sevilla|barcelona|valencia|zaragoza|bilbao|alicante|murcia|granada|malaga|cadiz/i.test(text))
-    return "OTRAS";
+function detectProvincia(text: string): "madrid_toledo" | "otra" | null {
+  if (/madrid|toledo/i.test(text)) return "madrid_toledo";
+  if (/cuenca|valencia|sevilla|barcelona|bilbao|zaragoza|murcia|alicante|otra/i.test(text))
+    return "otra";
   return null;
 }
 
-function detectTipo(text: string): QuoteTipo | null {
-  if (/exclusiv|a medida|personaliz/i.test(text)) return "exclusiva";
-  if (/plantill|prediseñ/i.test(text)) return "plantilla";
+function detectTipo(text: string): "plantilla" | "exclusiva" | null {
+  if (/exclusiv/i.test(text)) return "exclusiva";
+  if (/plantill/i.test(text)) return "plantilla";
   return null;
 }
 
-function extractAlumnos(text: string): number | null {
-  const re = /(\d{1,4})/g;
-  let m: RegExpExecArray | null;
-  let last: number | null = null;
-
-  while ((m = re.exec(text)) !== null) {
-    const n = parseInt(m[1], 10);
-    if (n > 0 && n <= 1000) last = n;
-  }
-  return last;
+function detectQuoteIntent(text: string) {
+  return /(presupuesto|precio|cu[aá]nto|coste)/i.test(text);
 }
 
-function detectEnvioDecision(text: string): boolean | null {
-  if (/recog|mano|retirar/i.test(text)) return false;
-  if (/envio|mensaj|paquete|transporte/i.test(text)) return true;
-  return null;
+function wantsPhotosGuide(text: string) {
+  return /(fotos|cómo hacer fotos|manual fotos)/i.test(text);
 }
 
-function euro(n: number) {
-  return `${n.toFixed(2)} €`;
+function wantsSendGuide(text: string) {
+  return /(enviar|wetransfer|mandar fotos)/i.test(text);
 }
 
-/* ---------------- API ---------------- */
+// ---------- OPENAI ----------
+
+async function callAI(text: string) {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) return null;
+
+  const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "gpt-4.1-mini",
+      temperature: 0.2,
+      messages: [
+        {
+          role: "system",
+          content: `
+Eres el asistente de Lucialco Orlas.
+
+REGLAS:
+- SOLO puedes usar información real del negocio.
+- NO inventes acabados, tamaños ni productos.
+- Para presupuestos: pregunta primero PROVINCIA.
+- Si no tienes dato → deriva a WhatsApp.
+- Estilo natural y profesional.
+`,
+        },
+        { role: "user", content: text },
+      ],
+    }),
+  });
+
+  if (!r.ok) return null;
+
+  const data = await r.json();
+  return data?.choices?.[0]?.message?.content || null;
+}
+
+// ---------- ROUTE ----------
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const incoming = Array.isArray(body?.messages) ? body.messages : [];
+    const messages = Array.isArray(body?.messages) ? body.messages : [];
+    const lastUser = getLastUser(messages);
 
-    const userMsgs = incoming
-      .filter((m: any) => m?.role === "user")
-      .map((m: any) => String(m.content));
-
-    const lastUser = norm(userMsgs[userMsgs.length - 1] || "");
-    const fullText = userMsgs.slice(-12).join(" ");
-
-    /* ---------- SALUDO ---------- */
-    if (!lastUser || isGreeting(lastUser)) {
+    // 📸 MANUAL FOTOS
+    if (wantsPhotosGuide(lastUser)) {
       return NextResponse.json({
         text:
-          "Hola 😊 Soy el asistente de Lucialco Orlas.\n\n" +
-          "Si quieres presupuesto, lo vemos paso a paso.\n" +
-          "👉 Primero: ¿el colegio está en Madrid/Toledo o en otra provincia?",
+          "Si el colegio está fuera de Madrid o Toledo, os facilitamos una guía completa para hacer las fotos correctamente.\n\n" +
+          "Incluye vestimenta, fondo, distancia, iluminación y cómo identificarlas.\n\n" +
+          `Si quieres que Lucía te la explique paso a paso → WhatsApp: ${WHATSAPP}`,
       });
     }
 
-    /* =======================================================
-       🔒 BLOQUEO TOTAL IA SI HAY PRESUPUESTO
-    ======================================================= */
+    // 📦 ENVÍO
+    if (wantsSendGuide(lastUser)) {
+      return NextResponse.json({
+        text:
+          "Las fotos se envían por WeTransfer al email fotos@lucialco.com.\n\n" +
+          "Si lo prefieres, Lucía puede ayudarte personalmente con el envío:\n" +
+          WHATSAPP,
+      });
+    }
 
-    if (wantsQuote(fullText)) {
-      const zona = detectZona(fullText);
-      if (!zona) {
+    // 💰 PRESUPUESTOS
+    if (detectQuoteIntent(lastUser)) {
+      const alumnos = extractNumber(lastUser);
+      const provincia = detectProvincia(lastUser);
+      const tipo = detectTipo(lastUser);
+
+      if (!provincia) {
         return NextResponse.json({
-          text: "Perfecto. ¿El colegio está en Madrid/Toledo o en otra provincia?",
+          text:
+            "Para calcular el presupuesto necesito primero la provincia.\n\n" +
+            "👉 ¿El colegio está en Madrid/Toledo o en otra provincia?",
         });
       }
 
-      const alumnos = extractAlumnos(fullText);
       if (!alumnos) {
         return NextResponse.json({
-          text: "Genial. ¿Para cuántos alumnos es la orla?",
+          text: "¿Para cuántos alumnos sería la orla?",
         });
       }
 
-      const tipo = detectTipo(fullText);
       if (!tipo) {
         return NextResponse.json({
-          text: "¿La queréis prediseñada (plantilla) o diseño exclusivo?",
+          text:
+            "¿Prefieres una orla:\n" +
+            "- Plantilla (prediseñada)\n" +
+            "- Exclusiva (diseño desde cero)?",
         });
       }
 
-      const envioDecision = detectEnvioDecision(fullText);
+      // ---------- TARIFAS ----------
 
-      if (zona === "MADRID_TOLEDO" && envioDecision === null) {
-        return NextResponse.json({
-          text: "¿Lo queréis con envío (15€ por pedido) o lo recogéis en mano?",
-        });
+      let precioUnitario = 0;
+      let transporte = 0;
+
+      if (provincia === "madrid_toledo") {
+        precioUnitario = tipo === "exclusiva" ? 15 : 11.5;
+      } else {
+        precioUnitario = tipo === "exclusiva" ? 10.5 : 9;
+        transporte = 15;
       }
 
-      const envio = zona === "OTRAS" ? true : (envioDecision ?? true);
-
-      const q = calcQuote({ alumnos, tipo, zona, envio });
+      const base = alumnos * precioUnitario;
+      const subtotal = base + transporte;
+      const iva = subtotal * 0.21;
+      const total = subtotal + iva;
 
       return NextResponse.json({
         text:
-          `📋 Presupuesto (IVA incluido):\n\n` +
-          `• Alumnos: ${q.alumnos}\n` +
-          `• Zona: ${zona === "MADRID_TOLEDO" ? "Madrid/Toledo" : "otra provincia"}\n` +
-          `• Tipo: ${tipo}\n` +
-          `• Precio alumno (sin IVA): ${euro(q.unit)}\n` +
-          `• Transporte (sin IVA): ${euro(q.shipping)}\n\n` +
-          `👉 TOTAL: ${euro(q.total)}\n` +
-          `👉 Sale a ${euro(q.perAlumno)} por alumno (IVA incluido)\n\n` +
-          `Si quieres, lo cerramos por WhatsApp: ${WHATSAPP}`,
+          `📋 Presupuesto estimado:\n\n` +
+          `Alumnos: ${alumnos}\n` +
+          `Provincia: ${provincia === "madrid_toledo" ? "Madrid/Toledo" : "Otra"}\n` +
+          `Tipo: ${tipo}\n` +
+          `Precio por alumno: ${precioUnitario.toFixed(2)} € + IVA\n` +
+          (transporte
+            ? `Transporte: 15 € + IVA\n`
+            : "") +
+          `\nTOTAL con IVA: ${total.toFixed(2)} €\n\n` +
+          `Si quieres que Lucía te prepare el presupuesto formal:\n${WHATSAPP}`,
       });
     }
 
-    /* ---------- DUDAS GENERALES (IA) ---------- */
+    // 🤖 IA GENERAL CONTROLADA
+    const ai = await callAI(lastUser);
 
-    return NextResponse.json({
-      text:
-        "¿Qué necesitas exactamente?\n\n" +
-        "👉 Puedo ayudarte con presupuestos o con dudas sobre el proceso.\n\n" +
-        `WhatsApp: ${WHATSAPP}`,
-    });
+    if (!ai) {
+      return NextResponse.json({
+        text:
+          "Ahora mismo no puedo responder esa consulta desde la web.\n\n" +
+          `Puedes hablar directamente con Lucía aquí:\n${WHATSAPP}`,
+      });
+    }
 
+    return NextResponse.json({ text: ai });
   } catch {
     return NextResponse.json({
-      text: `Ha ocurrido un error. WhatsApp: ${WHATSAPP}`,
+      text:
+        "Ha ocurrido un error.\n\n" +
+        `Puedes escribirnos por WhatsApp: ${WHATSAPP}`,
     });
   }
 }
