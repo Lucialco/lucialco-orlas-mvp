@@ -268,13 +268,15 @@ export async function POST(req: Request) {
       askedForTipo(lastAssistant);
 
     if (inQuoteFlow) {
+      const reply = norm(last).trim();
+      const repliedTipoChoice = reply === "1" || reply === "2";
       const prov = askedForProvincia(lastAssistant)
         ? detectProvinciaFromAll(last || all)
         : detectProvinciaFromAll(all);
       const alumnos = askedForAlumnos(lastAssistant)
         ? extractLastNumber(last)
         : extractLastNumber(all);
-      const tipo = askedForTipo(lastAssistant)
+      const tipo = askedForTipo(lastAssistant) || repliedTipoChoice
         ? detectTipoFromReply(last || all)
         : detectTipoFromAll(all);
 
