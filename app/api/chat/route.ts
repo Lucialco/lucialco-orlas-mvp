@@ -17,6 +17,12 @@ function joinAllUserText(messages: any[]): string {
   return getUserTexts(messages).join(" | ");
 }
 
+function joinAllUserTextExceptLast(messages: any[]): string {
+  const texts = getUserTexts(messages);
+  if (texts.length <= 1) return texts.join(" | ");
+  return texts.slice(0, -1).join(" | ");
+}
+
 function lastUserText(messages: any[]): string {
   const arr = getUserTexts(messages);
   return arr.length ? arr[arr.length - 1] : "";
@@ -79,8 +85,8 @@ function detectTipoFromAll(all: string): Tipo {
 
 function detectTipoFromReply(last: string): Tipo {
   const t = norm(last).trim();
-  if (t === "1" || t.includes("plantill") || t.includes("prediseñ")) return "plantilla";
-  if (t === "2" || t.includes("exclusiv") || t.includes("a medida")) return "exclusiva";
+  if (/^1\b/.test(t) || t.includes("plantill") || t.includes("prediseñ")) return "plantilla";
+  if (/^2\b/.test(t) || t.includes("exclusiv") || t.includes("a medida")) return "exclusiva";
   return detectTipoFromAll(t);
 }
 
@@ -202,6 +208,7 @@ export async function POST(req: Request) {
     const messages = Array.isArray(body?.messages) ? body.messages : [];
     const last = lastUserText(messages);
     const all = joinAllUserText(messages);
+    const allExceptLast = joinAllUserTextExceptLast(messages);
     const lastAssistant = lastAssistantText(messages);
 
     // ✅ DEBUG (para comprobar que entra en ESTE archivo)
@@ -275,7 +282,9 @@ export async function POST(req: Request) {
         : detectProvinciaFromAll(all);
       const alumnos = askedForAlumnos(lastAssistant)
         ? extractLastNumber(last)
-        : extractLastNumber(all);
+        : repliedTipoChoice
+          ? extractLastNumber(allExceptLast || all)
+          : extractLastNumber(all);
       const tipo = askedForTipo(lastAssistant) || repliedTipoChoice
         ? detectTipoFromReply(last || all)
         : detectTipoFromAll(all);
