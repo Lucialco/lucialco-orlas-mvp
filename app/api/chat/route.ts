@@ -84,10 +84,20 @@ function detectQuoteIntent(last: string): boolean {
   if (tLast === "presupuesto rápido" || tLast === "presupuesto rapido") return true;
 
   // intención de presupuesto
-  const intent = /(presupuesto|precio|cu[aá]nto|cuanto|coste|costos|tarifa)/i.test(tLast);
+  const intent = /(presupuesto|prespuesto|precio|coste|costos|tarifa|cuesta|vale)/i.test(tLast);
   const aboutOrlas = /(orla|orlas|alumn|niñ|colegio|clase|curso)/i.test(tLast);
 
-  return intent || aboutOrlas && /(presupuesto|precio|cu[aá]nto|cuanto|coste|tarifa)/i.test(tLast);
+  return intent || aboutOrlas && /(presupuesto|prespuesto|precio|coste|costos|tarifa|cuesta|vale)/i.test(tLast);
+}
+
+function detectPriorQuoteIntent(all: string): boolean {
+  const tAll = norm(all);
+  return /(presupuesto|prespuesto|precio|coste|costos|tarifa|cuesta|vale)/i.test(tAll);
+}
+
+function wantsTimelineInfo(last: string): boolean {
+  const t = norm(last);
+  return /(tiempo|tard[áa]is|tarda|plazo|entrega|duraci[oó]n|cu[aá]nto tarda)/i.test(t);
 }
 
 function askedForProvincia(text: string): boolean {
@@ -245,6 +255,7 @@ export async function POST(req: Request) {
     // ✅ PRESUPUESTOS (DETERMINISTA, SIN INVENTAR)
     const inQuoteFlow =
       detectQuoteIntent(last) ||
+      detectPriorQuoteIntent(all) ||
       askedForProvincia(lastAssistant) ||
       askedForAlumnos(lastAssistant) ||
       askedForTipo(lastAssistant);
@@ -289,6 +300,14 @@ export async function POST(req: Request) {
     }
 
     // ✅ CUALQUIER OTRA COSA: no inventamos → WhatsApp
+    if (wantsTimelineInfo(last)) {
+      return NextResponse.json({
+        text:
+          "Para darte un plazo exacto lo mejor es que lo confirme Lucía.\n\n" +
+          `Pulsa aquí y te atiende directamente: ${WHATSAPP}`,
+      });
+    }
+
     return NextResponse.json({
       text:
         "Para responderte bien necesito que lo vea Lucía (no quiero darte una respuesta incorrecta).\n\n" +
