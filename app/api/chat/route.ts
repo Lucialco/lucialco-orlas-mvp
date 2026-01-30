@@ -13,6 +13,13 @@ function getUserTexts(messages: any[]): string[] {
     .filter(Boolean);
 }
 
+function getAssistantTexts(messages: any[]): string[] {
+  return (Array.isArray(messages) ? messages : [])
+    .filter((m) => m?.role === "assistant" && typeof m?.content === "string")
+    .map((m) => m.content.trim())
+    .filter(Boolean);
+}
+
 function joinAllUserText(messages: any[]): string {
   return getUserTexts(messages).join(" | ");
 }
@@ -22,16 +29,16 @@ function lastUserText(messages: any[]): string {
   return arr.length ? arr[arr.length - 1] : "";
 }
 
+function lastAssistantText(messages: any[]): string {
+  const arr = getAssistantTexts(messages);
+  return arr.length ? arr[arr.length - 1] : "";
+}
+
 function norm(s: string) {
   return (s || "").toLowerCase();
 }
 
-function hasAny(text: string, patterns: RegExp[]) {
-  return patterns.some((p) => p.test(text));
-}
-
 function extractLastNumber(text: string): number | null {
-  // Evita matchAll (te dio error de TS). Esto es compatible con todo.
   const re = /(\d{1,4})/g;
   let m: RegExpExecArray | null;
   let last: number | null = null;
@@ -45,12 +52,49 @@ function extractLastNumber(text: string): number | null {
 type Provincia = "madrid_toledo" | "otra" | null;
 type Tipo = "plantilla" | "exclusiva" | null;
 
+// ===================== intent helpers =====================
+
+function wantsHuman(last: string): boolean {
+  const t = norm(last);
+  return /(hablar con alguien|hablar con lucia|persona|humano|whatsapp|w\.?app|contactar|tel[eé]fono)/i.test(t);
+}
+
+function isGreeting(last: string): boolean {
+  const t = norm(last);
+  return /^(hola|buenas|hello|hey|holi|buenos d[ií]as|buenas tardes|buenas noches)\b/.test(t);
+}
+
+function wantsPhotosGuide(last: string): boolean {
+  const t = norm(last);
+  return t === "fotos recomendadas" || /(fotos|c[oó]mo hacer las fotos|gu[ií]a.*fotos|manual.*fotos)/i.test(t);
+}
+
+function wantsWeTransferGuide(last: string): boolean {
+  const t = norm(last);
+  return /(wetransfer|enviar.*fotos|mandar.*fotos|c[oó]mo enviar)/i.test(t);
+}
+
+// ===================== quote detection =====================
+
+function detectQuoteIntent(last: string, all: string): boolean {
+  const tLast = norm(last);
+  const tAll = norm(all);
+
+  if (tLast === "presupuesto rápido" || tLast === "presupuesto rapido") return true;
+
+  const intent = /(presupuesto|precio|cu[aá]nto|cuanto|coste|costos|tarifa)/i.test(tLast);
+  const aboutOrlas = /(orla|orlas|alumn|niñ|colegio|clase|curso)/i.test(tAll);
+
+  return intent || (aboutOrlas && /(presupuesto|precio|cu[aá]nto|cuanto|coste|tarifa)/i.test(tAll));
+}
+
+// ===================== province / tipo =====================
+
 function detectProvinciaFromAll(all: string): Provincia {
   const t = norm(all);
   if (/(^|[^a-záéíóúñ])madrid([^a-záéíóúñ]|$)/i.test(t)) return "madrid_toledo";
   if (/(^|[^a-záéíóúñ])toledo([^a-záéíóúñ]|$)/i.test(t)) return "madrid_toledo";
 
-  // Si menciona cualquier otra provincia/ciudad típica, la tratamos como "otra"
   if (
     /(albacete|alicante|almer[ií]a|asturias|avila|badajoz|barcelona|bilbao|burgos|c[aá]ceres|c[aá]diz|cantabria|castell[oó]n|ciudad real|c[oó]rdoba|coru[nñ]a|cuenca|girona|granada|guadalajara|huelva|huesca|ja[eé]n|le[oó]n|lerida|lugo|m[aá]laga|murcia|navarra|ourense|palencia|pontevedra|salamanca|sevilla|soria|tarragona|teruel|valencia|valladolid|vizcaya|zamora|zaragoza|otra)/i.test(
       t
@@ -69,49 +113,24 @@ function detectTipoFromAll(all: string): Tipo {
   return null;
 }
 
-function detectQuoteIntent(last: string, all: string): boolean {
-  const tLast = norm(last);
-  const tAll = norm(all);
+// ===================== asked-for helpers =====================
 
-  // botones
-  if (tLast === "presupuesto rápido" || tLast === "presupuesto rapido") return true;
-
-  // intención de presupuesto
-  const intent = /(presupuesto|precio|cu[aá]nto|cuanto|coste|costos|tarifa)/i.test(tLast);
-  const aboutOrlas = /(orla|orlas|alumn|niñ|colegio|clase|curso)/i.test(tAll);
-
-  return intent || aboutOrlas && /(presupuesto|precio|cu[aá]nto|cuanto|coste|tarifa)/i.test(tAll);
+function askedForProvincia(lastA: string) {
+  const t = norm(lastA);
+  return /provincia|madrid\/toledo|otra provincia/i.test(t);
 }
 
-function wantsPhotosGuide(last: string): boolean {
-  const t = norm(last);
-  return t === "fotos recomendadas" || /(fotos|c[oó]mo hacer las fotos|gu[ií]a.*fotos|manual.*fotos)/i.test(t);
+function askedForAlumnos(lastA: string) {
+  const t = norm(lastA);
+  return /cu[aá]ntos alumnos|para cu[aá]ntos alumnos/i.test(t);
 }
 
-function wantsWeTransferGuide(last: string): boolean {
-  const t = norm(last);
-  return /(wetransfer|enviar.*fotos|mandar.*fotos|c[oó]mo enviar)/i.test(t);
+function askedForTipo(lastA: string) {
+  const t = norm(lastA);
+  return /qu[eé] opci[oó]n prefieres|plantilla|exclusiva|diseñ(.*)desde cero/i.test(t);
 }
 
-function wantsHuman(last: string): boolean {
-  const t = norm(last);
-  return /(hablar con alguien|hablar con lucia|persona|humano|whatsapp|w\.?app|contactar|tel[eé]fono)/i.test(t);
-}
-
-function isGreeting(last: string): boolean {
-  const t = norm(last);
-  return /^(hola|buenas|hello|hey|holi|buenos d[ií]as|buenas tardes|buenas noches)\b/.test(t);
-}
-
-// ===================== pricing rules (REAL, no invents) =====================
-// Madrid/Toledo:
-// - Exclusiva: 15 € / alumno sin IVA
-// - Plantilla: 11.5 € / alumno sin IVA
-//
-// Otras provincias:
-// - Plantilla: 9 € / alumno sin IVA
-// - Exclusiva: 10.5 € / alumno sin IVA
-// - Transporte: 15 € + IVA por pedido (1..100 orlas igual)
+// ===================== pricing =====================
 
 function pricePerAlumno(prov: Provincia, tipo: Tipo): number | null {
   if (!prov || !tipo) return null;
@@ -137,22 +156,23 @@ function presupuestoTexto(prov: Provincia, alumnos: number, tipo: Tipo) {
   const provTxt = prov === "madrid_toledo" ? "Madrid / Toledo" : "Otra provincia";
   const tipoTxt = tipo === "exclusiva" ? "Diseño exclusivo (a medida)" : "Orla prediseñada (plantilla)";
 
-  const lines: string[] = [];
-  lines.push(`📋 Presupuesto estimado (orlas por alumno)`);
-  lines.push(`- Provincia: ${provTxt}`);
-  lines.push(`- Alumnos: ${alumnos}`);
-  lines.push(`- Tipo: ${tipoTxt}`);
-  lines.push(``);
-  lines.push(`💶 Precio por alumno (sin IVA): ${eur(unit)} €`);
-  if (envio > 0) lines.push(`🚚 Transporte (sin IVA): ${eur(envio)} € (pago único por pedido)`);
-  lines.push(``);
-  lines.push(`Subtotal (sin IVA): ${eur(base)} €`);
-  lines.push(`IVA (21%): ${eur(iva)} €`);
-  lines.push(`✅ TOTAL (con IVA): ${eur(total)} €`);
-  lines.push(``);
-  lines.push(`Si quieres, Lucía te lo deja por escrito y lo cerráis por WhatsApp: ${WHATSAPP}`);
-
-  return lines.join("\n");
+  return [
+    "📋 Presupuesto estimado (orlas por alumno)",
+    `- Provincia: ${provTxt}`,
+    `- Alumnos: ${alumnos}`,
+    `- Tipo: ${tipoTxt}`,
+    "",
+    `💶 Precio por alumno (sin IVA): ${eur(unit)} €`,
+    envio > 0 ? `🚚 Transporte (sin IVA): ${eur(envio)} € (pago único por pedido)` : "",
+    "",
+    `Subtotal (sin IVA): ${eur(base)} €`,
+    `IVA (21%): ${eur(iva)} €`,
+    `✅ TOTAL (con IVA): ${eur(total)} €`,
+    "",
+    `Si quieres, Lucía te lo deja por escrito por WhatsApp: ${WHATSAPP}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 // ===================== route =====================
@@ -161,81 +181,89 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const messages = Array.isArray(body?.messages) ? body.messages : [];
+
     const last = lastUserText(messages);
     const all = joinAllUserText(messages);
+    const lastA = lastAssistantText(messages);
 
-    // ✅ DEBUG (para comprobar que entra en ESTE archivo)
-    if (norm(last) === "/debug") {
-      return NextResponse.json({
-        text:
-          `DEBUG OK ✅\n` +
-          `- route: app/api/chat/route.ts\n` +
-          `- has OPENAI_API_KEY: ${process.env.OPENAI_API_KEY ? "yes" : "no"}\n` +
-          `- time: ${new Date().toISOString()}\n`,
-      });
-    }
+    // ================= PRIORITY INTENTS =================
 
-    // ✅ HUMANO
     if (wantsHuman(last)) {
       return NextResponse.json({
-        text: `Perfecto. Habla directamente con Lucía por WhatsApp: ${WHATSAPP}`,
+        text: `Perfecto 🙂 Habla directamente con Lucía por WhatsApp: ${WHATSAPP}`,
       });
     }
 
-    // ✅ SALUDO
     if (isGreeting(last)) {
       return NextResponse.json({
         text:
-          "Hola. Soy el asistente de Lucialco Orlas.\n" +
+          "Hola. Soy el asistente de Lucialco Orlas.\n\n" +
           "Puedo ayudarte con:\n" +
           "• Presupuesto\n" +
-          "• Guía para hacer las fotos (si es fuera de Madrid/Toledo)\n" +
-          "• Cómo enviar las fotos por WeTransfer\n\n" +
+          "• Guía para hacer las fotos\n" +
+          "• Cómo enviarlas por WeTransfer\n\n" +
           "¿Qué necesitas?",
       });
     }
 
-    // ✅ GUÍA FOTOS
-    if (wantsPhotosGuide(last)) {
+    const wantsGuides = wantsPhotosGuide(last) || wantsWeTransferGuide(last);
+    if (wantsGuides) {
       return NextResponse.json({
         text:
-          "Si el colegio está fuera de Madrid o Toledo, el cole hace las fotos y nosotros nos ocupamos del resto (incluye retoque).\n\n" +
-          "Te compartimos la guía completa para hacer las fotos correctamente.\n" +
-          `Si quieres, Lucía te lo explica y revisa dudas por WhatsApp: ${WHATSAPP}`,
-      });
-    }
-
-    // ✅ GUÍA WETRANSFER
-    if (wantsWeTransferGuide(last)) {
-      return NextResponse.json({
-        text:
-          "Para enviarnos las fotos (fuera de Madrid/Toledo):\n" +
+          "📸 **Guía para hacer las fotos (fuera de Madrid/Toledo)**\n" +
+          "• Misma prenda arriba (ej: camiseta blanca)\n" +
+          "• Fondo liso (sábana estirada)\n" +
+          "• Buena luz natural\n" +
+          "• Cámara siempre a misma altura\n\n" +
+          "📩 **Cómo enviarlas por WeTransfer**\n" +
           "1) Entra en WeTransfer\n" +
-          "2) Añade los archivos\n" +
+          "2) Añade las fotos\n" +
           "3) En “Enviar email a” pon: fotos@lucialco.com\n" +
-          "4) Pon tu email para recibir confirmación\n" +
+          "4) Pon tu email\n" +
           "5) Enviar\n\n" +
-          `Si se complica, lo resolvéis con Lucía por WhatsApp: ${WHATSAPP}`,
+          "📄 Si quieres el PDF con ambas guías, aquí no puedo adjuntarlo.\n" +
+          `👉 Pulsa el botón de WhatsApp y te lo enviamos: ${WHATSAPP}`,
       });
     }
 
-    // ✅ PRESUPUESTOS (DETERMINISTA, SIN INVENTAR)
+    // ================= QUOTE FLOW =================
+
     if (detectQuoteIntent(last, all)) {
-      const prov = detectProvinciaFromAll(all);
-      const alumnos = extractLastNumber(all);
-      const tipo = detectTipoFromAll(all);
+      let prov = detectProvinciaFromAll(all);
+      let alumnos = extractLastNumber(all);
+      let tipo = detectTipoFromAll(all);
+
+      if (askedForProvincia(lastA)) {
+        const p = detectProvinciaFromAll(last);
+        if (p) prov = p;
+      }
+
+      if (askedForAlumnos(lastA)) {
+        const n = extractLastNumber(last);
+        if (n) alumnos = n;
+      }
+
+      if (askedForTipo(lastA)) {
+        const t = norm(last).replace(/[^\wáéíóúñ]/gi, " ").trim();
+        if (t === "1") tipo = "plantilla";
+        else if (t === "2") tipo = "exclusiva";
+        else {
+          const tt = detectTipoFromAll(last);
+          if (tt) tipo = tt;
+        }
+      }
 
       if (!prov) {
         return NextResponse.json({
           text:
-            "Para darte presupuesto, lo primero es la provincia.\n\n" +
+            "Para darte presupuesto necesito primero la provincia.\n\n" +
             "👉 ¿El colegio está en Madrid/Toledo o en otra provincia?",
         });
       }
 
       if (!alumnos) {
         return NextResponse.json({
-          text: "Perfecto. ¿Para cuántos alumnos sería la orla?",
+          text: "Perfecto 👍 ¿Para cuántos alumnos sería la orla?",
         });
       }
 
@@ -253,15 +281,16 @@ export async function POST(req: Request) {
       });
     }
 
-    // ✅ CUALQUIER OTRA COSA: no inventamos → WhatsApp
+    // ================= FALLBACK =================
+
     return NextResponse.json({
       text:
-        "Para responderte bien necesito que lo vea Lucía (no quiero darte una respuesta incorrecta).\n\n" +
-        `Pulsa aquí y te atiende directamente: ${WHATSAPP}`,
+        "Para ayudarte bien lo revisa Lucía directamente.\n\n" +
+        `👉 Pulsa aquí y te atiende por WhatsApp: ${WHATSAPP}`,
     });
   } catch {
     return NextResponse.json({
-      text: `Ha ocurrido un error. Puedes escribirnos por WhatsApp: ${WHATSAPP}`,
+      text: `Ha ocurrido un error. Escríbenos por WhatsApp: ${WHATSAPP}`,
     });
   }
 }
