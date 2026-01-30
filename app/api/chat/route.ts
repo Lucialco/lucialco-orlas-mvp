@@ -1,296 +1,355 @@
-// app/api/chat/route.ts
-import { NextResponse } from "next/server";
+"use client";
 
-export const runtime = "nodejs";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
+
+type Msg = { role: "user" | "assistant"; content: string };
+
 const WHATSAPP = "https://wa.me/34606849914";
 
-// ===================== helpers =====================
+export default function ChatWidget() {
+  const [open, setOpen] = useState(false);
+  const [input, setInput] = useState("");
+  const [msgs, setMsgs] = useState<Msg[]>([
+    {
+      role: "assistant",
+      content:
+        "Hola. Soy el asistente de Lucialco Orlas.\nPuedo resolver dudas y preparar un presupuesto. ¿Qué necesitas?",
+    },
+  ]);
+  const [loading, setLoading] = useState(false);
+  const [vw, setVw] = useState<number>(0);
+  const [vh, setVh] = useState<number>(0);
+  const listRef = useRef<HTMLDivElement | null>(null);
 
-function getUserTexts(messages: any[]): string[] {
-  return (Array.isArray(messages) ? messages : [])
-    .filter((m) => m?.role === "user" && typeof m?.content === "string")
-    .map((m) => m.content.trim())
-    .filter(Boolean);
-}
+  useEffect(() => {
+    const update = () => {
+      setVw(window.innerWidth);
+      setVh(window.innerHeight);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
-function getAssistantTexts(messages: any[]): string[] {
-  return (Array.isArray(messages) ? messages : [])
-    .filter((m) => m?.role === "assistant" && typeof m?.content === "string")
-    .map((m) => m.content.trim())
-    .filter(Boolean);
-}
+  useEffect(() => {
+    if (!open) return;
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [open, msgs, loading]);
 
-function joinAllUserText(messages: any[]): string {
-  return getUserTexts(messages).join(" | ");
-}
+  const isMobile = vw > 0 && vw <= 520;
 
-function lastUserText(messages: any[]): string {
-  const arr = getUserTexts(messages);
-  return arr.length ? arr[arr.length - 1] : "";
-}
+  const styles = useMemo(() => {
+    const pad = 12;
+    const panelW = isMobile ? vw - pad * 2 : 380;
+    const panelH = isMobile ? Math.max(420, vh - 120) : 560;
 
-function lastAssistantText(messages: any[]): string {
-  const arr = getAssistantTexts(messages);
-  return arr.length ? arr[arr.length - 1] : "";
-}
+    return {
+      wrapper: {
+        position: "fixed" as const,
+        right: isMobile ? pad : 18,
+        left: isMobile ? pad : "auto",
+        bottom: isMobile ? pad : 18,
+        zIndex: 99999,
+        fontFamily:
+          'system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif',
+      },
+      launcher: {
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        borderRadius: 999,
+        border: "1px solid rgba(0,0,0,0.12)",
+        background: "#ffffff",
+        padding: "10px 12px",
+        boxShadow: "0 12px 30px rgba(0,0,0,0.18)",
+        cursor: "pointer",
+      },
+      launcherText: {
+        fontSize: 13,
+        lineHeight: "16px",
+        color: "#111",
+        maxWidth: 200,
+      },
+      badge: {
+        display: "inline-block",
+        fontSize: 12,
+        background: "#0f172a",
+        color: "white",
+        padding: "3px 8px",
+        borderRadius: 999,
+        marginTop: 4,
+      },
+      avatarWrap: {
+        width: 38,
+        height: 38,
+        borderRadius: 999,
+        overflow: "hidden",
+        border: "1px solid rgba(0,0,0,0.12)",
+        background: "#fff",
+        flex: "0 0 auto",
+      },
+      panel: {
+        width: panelW,
+        height: panelH,
+        borderRadius: 16,
+        background: "#fff",
+        border: "1px solid rgba(0,0,0,0.12)",
+        boxShadow: "0 18px 50px rgba(0,0,0,0.22)",
+        overflow: "hidden",
+      },
+      header: {
+        padding: "12px 12px",
+        borderBottom: "1px solid rgba(0,0,0,0.08)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        background:
+          "linear-gradient(135deg, rgba(15,23,42,1) 0%, rgba(30,41,59,1) 100%)",
+        color: "white",
+      },
+      headerLeft: { display: "flex", alignItems: "center", gap: 10 },
+      title: { fontWeight: 700, fontSize: 14, margin: 0 },
+      subtitle: { fontSize: 12, opacity: 0.9, margin: 0 },
+      closeBtn: {
+        border: "none",
+        background: "rgba(255,255,255,0.15)",
+        color: "white",
+        width: 38,
+        height: 38,
+        borderRadius: 12,
+        cursor: "pointer",
+        fontSize: 20,
+        lineHeight: "38px",
+      },
+      list: {
+        padding: 12,
+        height: panelH - 58 - 76,
+        overflowY: "auto" as const,
+        background: "#f7f7fb",
+      },
+      bubbleRow: (role: Msg["role"]) => ({
+        display: "flex",
+        justifyContent: role === "user" ? "flex-end" : "flex-start",
+        marginBottom: 10,
+      }),
+      bubble: (role: Msg["role"]) => ({
+        maxWidth: "84%",
+        whiteSpace: "pre-wrap" as const,
+        padding: "10px 12px",
+        borderRadius: 16,
+        fontSize: 13,
+        lineHeight: "18px",
+        background: role === "user" ? "#0f172a" : "#ffffff",
+        color: role === "user" ? "#ffffff" : "#111111",
+        border:
+          role === "user"
+            ? "1px solid rgba(255,255,255,0.08)"
+            : "1px solid rgba(0,0,0,0.08)",
+        boxShadow:
+          role === "user"
+            ? "0 6px 18px rgba(15,23,42,0.18)"
+            : "0 6px 18px rgba(0,0,0,0.08)",
+      }),
+      composer: {
+        padding: 12,
+        borderTop: "1px solid rgba(0,0,0,0.08)",
+        background: "#ffffff",
+        display: "flex",
+        gap: 8,
+        alignItems: "center",
+      },
+      input: {
+        flex: 1,
+        padding: "12px 12px",
+        borderRadius: 12,
+        border: "1px solid rgba(0,0,0,0.18)",
+        outline: "none",
+        fontSize: 14,
+      },
+      sendBtn: {
+        padding: "12px 14px",
+        borderRadius: 12,
+        border: "none",
+        background: "#0f172a",
+        color: "white",
+        cursor: "pointer",
+        fontWeight: 700,
+        fontSize: 14,
+      },
+      typing: {
+        fontSize: 12,
+        color: "rgba(0,0,0,0.55)",
+        margin: "6px 0 0 0",
+      },
+      quickRow: {
+        display: "flex",
+        gap: 8,
+        flexWrap: "wrap" as const,
+        marginTop: 10,
+      },
+      quickBtn: {
+        border: "1px solid rgba(0,0,0,0.12)",
+        background: "#fff",
+        borderRadius: 999,
+        padding: "8px 10px",
+        cursor: "pointer",
+        fontSize: 12,
+      },
+      waBtn: {
+        display: "inline-block",
+        marginTop: 10,
+        borderRadius: 12,
+        padding: "10px 12px",
+        background: "#0f172a",
+        color: "#fff",
+        textDecoration: "none",
+        fontWeight: 700,
+        fontSize: 13,
+      },
+    };
+  }, [isMobile, vw, vh]);
 
-function norm(s: string) {
-  return (s || "").toLowerCase();
-}
+  async function send(textOverride?: string) {
+    const text = (textOverride ?? input).trim();
+    if (!text || loading) return;
 
-function extractLastNumber(text: string): number | null {
-  const re = /(\d{1,4})/g;
-  let m: RegExpExecArray | null;
-  let last: number | null = null;
-  while ((m = re.exec(text)) !== null) {
-    const n = parseInt(m[1], 10);
-    if (Number.isFinite(n) && n > 0 && n <= 1000) last = n;
+    const next = [...msgs, { role: "user" as const, content: text }];
+    setMsgs(next);
+    setInput("");
+    setLoading(true);
+
+    try {
+      const r = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: next }),
+      });
+
+      const data = await r.json();
+
+      if (!r.ok || data?.error) {
+        const msg =
+          "Ahora mismo no puedo completar la solicitud desde la web. Si quieres, lo resolvemos por WhatsApp.";
+
+        setMsgs([
+          ...next,
+          { role: "assistant", content: msg + `\n\nWhatsApp: ${WHATSAPP}` },
+        ]);
+        setLoading(false);
+        return;
+      }
+
+      const reply =
+        data?.text ||
+        `No dispongo de esa información confirmada. Podemos verlo por WhatsApp: ${WHATSAPP}`;
+
+      setMsgs([...next, { role: "assistant", content: reply }]);
+    } catch {
+      setMsgs([
+        ...next,
+        {
+          role: "assistant",
+          content:
+            "No puedo conectar en este momento. Puedes escribirnos por WhatsApp:\n" + WHATSAPP,
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
   }
-  return last;
-}
 
-type Provincia = "madrid_toledo" | "otra" | null;
-type Tipo = "plantilla" | "exclusiva" | null;
+  return (
+    <div style={styles.wrapper}>
+      {!open ? (
+        <div style={styles.launcher} onClick={() => setOpen(true)}>
+          <div style={styles.avatarWrap}>
+            <Image
+              src="/brand/logo.jpg"
+              alt="Lucialco"
+              width={60}
+              height={60}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          </div>
+          <div>
+            <div style={styles.launcherText}>
+              ¿Tienes una duda o quieres un presupuesto?
+            </div>
+            <div style={styles.badge}>Asistente</div>
+          </div>
+        </div>
+      ) : (
+        <div style={styles.panel}>
+          <div style={styles.header}>
+            <div style={styles.headerLeft}>
+              <div style={styles.avatarWrap}>
+                <Image
+                  src="/brand/logo.jpg"
+                  alt="Lucialco"
+                  width={60}
+                  height={60}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              </div>
+              <div>
+                <p style={styles.title as any}>Lucialco Orlas</p>
+                <p style={styles.subtitle as any}>
+                  Asistente de dudas y presupuestos
+                </p>
+              </div>
+            </div>
+            <button
+              style={styles.closeBtn}
+              onClick={() => setOpen(false)}
+              aria-label="Cerrar"
+            >
+              ×
+            </button>
+          </div>
 
-// ===================== intent helpers =====================
+          <div ref={listRef} style={styles.list}>
+            {msgs.map((m, i) => (
+              <div key={i} style={styles.bubbleRow(m.role)}>
+                <div style={styles.bubble(m.role)}>{m.content}</div>
+              </div>
+            ))}
+            {loading && <div style={styles.typing}>Escribiendo…</div>}
 
-function wantsHuman(last: string): boolean {
-  const t = norm(last);
-  return /(hablar con alguien|hablar con lucia|persona|humano|whatsapp|w\.?app|contactar|tel[eé]fono)/i.test(t);
-}
+            <div style={styles.quickRow}>
+              <button
+                style={styles.quickBtn}
+                onClick={() => send("¿Qué fotos valen para la orla?")}
+              >
+                Fotos recomendadas
+              </button>
+              <button
+                style={styles.quickBtn}
+                onClick={() => send("Presupuesto para 30 alumnos")}
+              >
+                Presupuesto rápido
+              </button>
+              <a style={styles.waBtn as any} href={WHATSAPP} target="_blank" rel="noreferrer">
+                WhatsApp
+              </a>
+            </div>
+          </div>
 
-function isGreeting(last: string): boolean {
-  const t = norm(last);
-  return /^(hola|buenas|hello|hey|holi|buenos d[ií]as|buenas tardes|buenas noches)\b/.test(t);
-}
-
-function wantsPhotosGuide(last: string): boolean {
-  const t = norm(last);
-  return t === "fotos recomendadas" || /(fotos|c[oó]mo hacer las fotos|gu[ií]a.*fotos|manual.*fotos)/i.test(t);
-}
-
-function wantsWeTransferGuide(last: string): boolean {
-  const t = norm(last);
-  return /(wetransfer|enviar.*fotos|mandar.*fotos|c[oó]mo enviar)/i.test(t);
-}
-
-// ===================== quote detection =====================
-
-function detectQuoteIntent(last: string, all: string): boolean {
-  const tLast = norm(last);
-  const tAll = norm(all);
-
-  if (tLast === "presupuesto rápido" || tLast === "presupuesto rapido") return true;
-
-  const intent = /(presupuesto|precio|cu[aá]nto|cuanto|coste|costos|tarifa)/i.test(tLast);
-  const aboutOrlas = /(orla|orlas|alumn|niñ|colegio|clase|curso)/i.test(tAll);
-
-  return intent || (aboutOrlas && /(presupuesto|precio|cu[aá]nto|cuanto|coste|tarifa)/i.test(tAll));
-}
-
-// ===================== province / tipo =====================
-
-function detectProvinciaFromAll(all: string): Provincia {
-  const t = norm(all);
-  if (/(^|[^a-záéíóúñ])madrid([^a-záéíóúñ]|$)/i.test(t)) return "madrid_toledo";
-  if (/(^|[^a-záéíóúñ])toledo([^a-záéíóúñ]|$)/i.test(t)) return "madrid_toledo";
-
-  if (
-    /(albacete|alicante|almer[ií]a|asturias|avila|badajoz|barcelona|bilbao|burgos|c[aá]ceres|c[aá]diz|cantabria|castell[oó]n|ciudad real|c[oó]rdoba|coru[nñ]a|cuenca|girona|granada|guadalajara|huelva|huesca|ja[eé]n|le[oó]n|lerida|lugo|m[aá]laga|murcia|navarra|ourense|palencia|pontevedra|salamanca|sevilla|soria|tarragona|teruel|valencia|valladolid|vizcaya|zamora|zaragoza|otra)/i.test(
-      t
-    )
-  ) {
-    return "otra";
-  }
-
-  return null;
-}
-
-function detectTipoFromAll(all: string): Tipo {
-  const t = norm(all);
-  if (/exclusiv/.test(t) || /a medida/.test(t) || /diseñ(.*)desde 0/.test(t)) return "exclusiva";
-  if (/plantill/.test(t) || /prediseñ/.test(t)) return "plantilla";
-  return null;
-}
-
-// ===================== asked-for helpers =====================
-
-function askedForProvincia(lastA: string) {
-  const t = norm(lastA);
-  return /provincia|madrid\/toledo|otra provincia/i.test(t);
-}
-
-function askedForAlumnos(lastA: string) {
-  const t = norm(lastA);
-  return /cu[aá]ntos alumnos|para cu[aá]ntos alumnos/i.test(t);
-}
-
-function askedForTipo(lastA: string) {
-  const t = norm(lastA);
-  return /qu[eé] opci[oó]n prefieres|plantilla|exclusiva|diseñ(.*)desde cero/i.test(t);
-}
-
-// ===================== pricing =====================
-
-function pricePerAlumno(prov: Provincia, tipo: Tipo): number | null {
-  if (!prov || !tipo) return null;
-  if (prov === "madrid_toledo") return tipo === "exclusiva" ? 15 : 11.5;
-  return tipo === "exclusiva" ? 10.5 : 9;
-}
-
-function shippingBase(prov: Provincia): number {
-  return prov === "otra" ? 15 : 0;
-}
-
-function eur(n: number) {
-  return n.toFixed(2).replace(".", ",");
-}
-
-function presupuestoTexto(prov: Provincia, alumnos: number, tipo: Tipo) {
-  const unit = pricePerAlumno(prov, tipo)!;
-  const envio = shippingBase(prov);
-  const base = alumnos * unit + envio;
-  const iva = base * 0.21;
-  const total = base + iva;
-
-  const provTxt = prov === "madrid_toledo" ? "Madrid / Toledo" : "Otra provincia";
-  const tipoTxt = tipo === "exclusiva" ? "Diseño exclusivo (a medida)" : "Orla prediseñada (plantilla)";
-
-  return [
-    "📋 Presupuesto estimado (orlas por alumno)",
-    `- Provincia: ${provTxt}`,
-    `- Alumnos: ${alumnos}`,
-    `- Tipo: ${tipoTxt}`,
-    "",
-    `💶 Precio por alumno (sin IVA): ${eur(unit)} €`,
-    envio > 0 ? `🚚 Transporte (sin IVA): ${eur(envio)} € (pago único por pedido)` : "",
-    "",
-    `Subtotal (sin IVA): ${eur(base)} €`,
-    `IVA (21%): ${eur(iva)} €`,
-    `✅ TOTAL (con IVA): ${eur(total)} €`,
-    "",
-    `Si quieres, Lucía te lo deja por escrito por WhatsApp: ${WHATSAPP}`,
-  ]
-    .filter(Boolean)
-    .join("\n");
-}
-
-// ===================== route =====================
-
-export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-    const messages = Array.isArray(body?.messages) ? body.messages : [];
-
-    const last = lastUserText(messages);
-    const all = joinAllUserText(messages);
-    const lastA = lastAssistantText(messages);
-
-    // ================= PRIORITY INTENTS =================
-
-    if (wantsHuman(last)) {
-      return NextResponse.json({
-        text: `Perfecto 🙂 Habla directamente con Lucía por WhatsApp: ${WHATSAPP}`,
-      });
-    }
-
-    if (isGreeting(last)) {
-      return NextResponse.json({
-        text:
-          "Hola. Soy el asistente de Lucialco Orlas.\n\n" +
-          "Puedo ayudarte con:\n" +
-          "• Presupuesto\n" +
-          "• Guía para hacer las fotos\n" +
-          "• Cómo enviarlas por WeTransfer\n\n" +
-          "¿Qué necesitas?",
-      });
-    }
-
-    const wantsGuides = wantsPhotosGuide(last) || wantsWeTransferGuide(last);
-    if (wantsGuides) {
-      return NextResponse.json({
-        text:
-          "📸 **Guía para hacer las fotos (fuera de Madrid/Toledo)**\n" +
-          "• Misma prenda arriba (ej: camiseta blanca)\n" +
-          "• Fondo liso (sábana estirada)\n" +
-          "• Buena luz natural\n" +
-          "• Cámara siempre a misma altura\n\n" +
-          "📩 **Cómo enviarlas por WeTransfer**\n" +
-          "1) Entra en WeTransfer\n" +
-          "2) Añade las fotos\n" +
-          "3) En “Enviar email a” pon: fotos@lucialco.com\n" +
-          "4) Pon tu email\n" +
-          "5) Enviar\n\n" +
-          "📄 Si quieres el PDF con ambas guías, aquí no puedo adjuntarlo.\n" +
-          `👉 Pulsa el botón de WhatsApp y te lo enviamos: ${WHATSAPP}`,
-      });
-    }
-
-    // ================= QUOTE FLOW =================
-
-    if (detectQuoteIntent(last, all)) {
-      let prov = detectProvinciaFromAll(all);
-      let alumnos = extractLastNumber(all);
-      let tipo = detectTipoFromAll(all);
-
-      if (askedForProvincia(lastA)) {
-        const p = detectProvinciaFromAll(last);
-        if (p) prov = p;
-      }
-
-      if (askedForAlumnos(lastA)) {
-        const n = extractLastNumber(last);
-        if (n) alumnos = n;
-      }
-
-      if (askedForTipo(lastA)) {
-        const t = norm(last).replace(/[^\wáéíóúñ]/gi, " ").trim();
-        if (t === "1") tipo = "plantilla";
-        else if (t === "2") tipo = "exclusiva";
-        else {
-          const tt = detectTipoFromAll(last);
-          if (tt) tipo = tt;
-        }
-      }
-
-      if (!prov) {
-        return NextResponse.json({
-          text:
-            "Para darte presupuesto necesito primero la provincia.\n\n" +
-            "👉 ¿El colegio está en Madrid/Toledo o en otra provincia?",
-        });
-      }
-
-      if (!alumnos) {
-        return NextResponse.json({
-          text: "Perfecto 👍 ¿Para cuántos alumnos sería la orla?",
-        });
-      }
-
-      if (!tipo) {
-        return NextResponse.json({
-          text:
-            "¿Qué opción prefieres?\n" +
-            "1) Plantilla (prediseñada)\n" +
-            "2) Exclusiva (diseño desde cero)",
-        });
-      }
-
-      return NextResponse.json({
-        text: presupuestoTexto(prov, alumnos, tipo),
-      });
-    }
-
-    // ================= FALLBACK =================
-
-    return NextResponse.json({
-      text:
-        "Para ayudarte bien lo revisa Lucía directamente.\n\n" +
-        `👉 Pulsa aquí y te atiende por WhatsApp: ${WHATSAPP}`,
-    });
-  } catch {
-    return NextResponse.json({
-      text: `Ha ocurrido un error. Escríbenos por WhatsApp: ${WHATSAPP}`,
-    });
-  }
+          <div style={styles.composer}>
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && send()}
+              placeholder="Escribe aquí…"
+              style={styles.input}
+            />
+            <button style={styles.sendBtn} onClick={() => send()}>
+              Enviar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
