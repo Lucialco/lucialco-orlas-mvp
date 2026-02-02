@@ -6,71 +6,20 @@ import { useRouter, useSearchParams } from "next/navigation";
 const LUCIA_PHONE_E164 = "34606849914";
 const WHATSAPP_LINK = `https://wa.me/${LUCIA_PHONE_E164}`;
 
-// ✅ Persistencia para que al volver de /plantillas no se pierda nada
 const LS_PROVINCIA = "lucialco_orlas_provincia";
 const LS_MODALIDAD = "lucialco_orlas_modalidad";
 
-// ✅ Provincias (select obligatorio)
 const PROVINCIAS = [
-  "Álava",
-  "Albacete",
-  "Alicante",
-  "Almería",
-  "Asturias",
-  "Ávila",
-  "Badajoz",
-  "Barcelona",
-  "Burgos",
-  "Cáceres",
-  "Cádiz",
-  "Cantabria",
-  "Castellón",
-  "Ciudad Real",
-  "Córdoba",
-  "Cuenca",
-  "Gerona",
-  "Granada",
-  "Guadalajara",
-  "Guipúzcoa",
-  "Huelva",
-  "Huesca",
-  "Islas Baleares",
-  "Jaén",
-  "La Coruña",
-  "La Rioja",
-  "Las Palmas",
-  "León",
-  "Lérida",
-  "Lugo",
-  "Madrid",
-  "Málaga",
-  "Murcia",
-  "Navarra",
-  "Orense",
-  "Palencia",
-  "Pontevedra",
-  "Salamanca",
-  "Santa Cruz de Tenerife",
-  "Segovia",
-  "Sevilla",
-  "Soria",
-  "Tarragona",
-  "Teruel",
-  "Toledo",
-  "Valencia",
-  "Valladolid",
-  "Vizcaya",
-  "Zamora",
-  "Zaragoza",
+  "Álava","Albacete","Alicante","Almería","Asturias","Ávila","Badajoz","Barcelona","Burgos","Cáceres","Cádiz","Cantabria",
+  "Castellón","Ciudad Real","Córdoba","Cuenca","Gerona","Granada","Guadalajara","Guipúzcoa","Huelva","Huesca","Islas Baleares",
+  "Jaén","La Coruña","La Rioja","Las Palmas","León","Lérida","Lugo","Madrid","Málaga","Murcia","Navarra","Orense","Palencia",
+  "Pontevedra","Salamanca","Santa Cruz de Tenerife","Segovia","Sevilla","Soria","Tarragona","Teruel","Toledo","Valencia",
+  "Valladolid","Vizcaya","Zamora","Zaragoza",
 ] as const;
 
-// ✅ PRECIOS ACTUALIZADOS
 const PRICE = {
-  // Presencial (Madrid/Toledo)
   local_plantilla: 11.5,
   local_exclusiva: 15,
-
-  // Digital (resto España)
   digital_plantilla: 9,
   digital_exclusiva: 10.5,
   envio_nacional: 15,
@@ -78,58 +27,16 @@ const PRICE = {
   extra_beca: 5,
   extra_taza: 9.5,
   extra_sobre: 3,
-  extra_fotos_recuerdo: 4.5, // por alumno
+  extra_fotos_recuerdo: 4.5,
 
   iva_pct: 21,
 } as const;
 
-// ✅ Texto que debe viajar en el presupuesto enviado (solo si hay extras)
 const EXTRAS_DISCLAIMER =
   "Nota: el precio de los extras es orientativo y está pendiente de confirmar detalles de acabados (por ejemplo, impresión y tonos de color).";
 
-// =======================
-// ✅ CUPONES (MVP)
-// =======================
-// ⚠️ Esto está en CLIENT porque tu cálculo es client-side.
-// Si quieres gestionar cupones sin desplegar, lo pasamos a /api/quote (server).
-type Coupon =
-  | { code: string; type: "percent"; value: number; active: boolean }
-  | { code: string; type: "amount"; value: number; active: boolean };
-
-const COUPONS: Coupon[] = [
-  { code: "LUCIA10", type: "percent", value: 10, active: true },
-  { code: "ORLA15", type: "amount", value: 15, active: true },
-];
-
-function normalizeCoupon(code: string) {
-  return String(code || "").trim().toUpperCase();
-}
-function findCoupon(codeRaw: string) {
-  const c = normalizeCoupon(codeRaw);
-  if (!c) return null;
-  return COUPONS.find((x) => x.active && normalizeCoupon(x.code) === c) || null;
-}
-function applyCoupon(subtotalSinIva: number, codeRaw: string) {
-  const coupon = findCoupon(codeRaw);
-  if (!coupon) return { couponApplied: null as string | null, discountSinIva: 0, subtotalConDescuentoSinIva: subtotalSinIva };
-
-  let discountSinIva =
-    coupon.type === "percent" ? subtotalSinIva * (coupon.value / 100) : coupon.value;
-
-  discountSinIva = Math.max(0, Math.min(discountSinIva, subtotalSinIva));
-
-  return {
-    couponApplied: normalizeCoupon(coupon.code),
-    discountSinIva: round2(discountSinIva),
-    subtotalConDescuentoSinIva: round2(subtotalSinIva - discountSinIva),
-  };
-}
-
-// =======================
-
 type Status = "idle" | "sending" | "sent" | "error";
 type EstadoPresupuesto = "informativo" | "interesado";
-
 type ModalidadOrla = "local_plantilla" | "local_exclusiva" | "digital_plantilla" | "digital_exclusiva";
 
 type FieldKey = "contacto" | "email" | "telefono" | "alumnos" | "provincia" | "plantilla" | "cupon";
@@ -179,12 +86,34 @@ function prettyTplName(url: string) {
 function eur(n: number) {
   return `${n.toFixed(2)} €`;
 }
+function normalizeCoupon(code: string) {
+  return String(code || "").trim().toUpperCase();
+}
+
+type QuoteResponse = {
+  alumnos: number;
+  modalidad: ModalidadOrla;
+  unitBase: number;
+  baseSinIva: number;
+  extrasSinIva: number;
+  envioSinIva: number;
+  subtotalSinIva: number;
+
+  couponProvided: boolean;
+  couponValid: boolean;
+  couponApplied: string | null;
+  discountSinIva: number;
+  subtotalConDescuentoSinIva: number;
+
+  ivaPct: number;
+  iva: number;
+  totalConIva: number;
+};
 
 export default function PresupuestoClient() {
   const router = useRouter();
   const sp = useSearchParams();
 
-  // Plantilla seleccionada (si vienes desde /plantillas)
   const tplOld = sp.get("tpl") || "";
   const catOld = sp.get("cat") || "";
   const tplNew = sp.get("plantilla_url") || "";
@@ -192,72 +121,13 @@ export default function PresupuestoClient() {
   const tpl = tplOld || tplNew;
   const cat = catOld || catNew;
 
-  // Compat con tu flujo anterior: tipo=adhoc => exclusiva (local)
   const tipoQS = (sp.get("tipo") || "").toLowerCase();
 
-  // Provincia obligatoria
   const [provincia, setProvincia] = useState<string>("");
   const esLocal = useMemo(() => isLocalProvincia(provincia), [provincia]);
   const provinciaOk = !!provincia;
 
-  // Modalidad elegida (se decide DESPUÉS de provincia)
   const [modalidad, setModalidad] = useState<ModalidadOrla | null>(null);
-
-  // ✅ Cupón
-  const [couponCode, setCouponCode] = useState<string>("");
-
-  // ✅ 1) Cargar provincia/modalidad guardadas
-  useEffect(() => {
-    try {
-      const p = localStorage.getItem(LS_PROVINCIA) || "";
-      const m = (localStorage.getItem(LS_MODALIDAD) || "") as ModalidadOrla | "";
-      if (p) setProvincia(p);
-      if (m) setModalidad(m || null);
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  // ✅ 2) Compat: tipo=adhoc => exclusiva (luego provincia manda)
-  useEffect(() => {
-    if (modalidad) return;
-    if (tipoQS === "adhoc") setModalidad("local_exclusiva");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tipoQS]);
-
-  // ✅ 3) Si viene con tpl y aún no hay modalidad, asumimos plantilla según provincia
-  useEffect(() => {
-    if (!tpl) return;
-    if (!provinciaOk) return;
-    if (modalidad) return;
-    setModalidad(esLocal ? "local_plantilla" : "digital_plantilla");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tpl, provinciaOk, esLocal]);
-
-  // ✅ 4) Guardar provincia/modalidad
-  useEffect(() => {
-    try {
-      if (provincia) localStorage.setItem(LS_PROVINCIA, provincia);
-    } catch {}
-  }, [provincia]);
-
-  useEffect(() => {
-    try {
-      if (modalidad) localStorage.setItem(LS_MODALIDAD, modalidad);
-    } catch {}
-  }, [modalidad]);
-
-  // Si cambia provincia, ajusta modalidad para que no se quede incoherente
-  useEffect(() => {
-    if (!provinciaOk) return;
-
-    if (esLocal) {
-      if (modalidad?.startsWith("digital")) setModalidad(null);
-    } else {
-      if (modalidad?.startsWith("local")) setModalidad(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [provinciaOk, esLocal]);
 
   const [status, setStatus] = useState<Status>("idle");
   const [estado, setEstado] = useState<EstadoPresupuesto>("informativo");
@@ -272,101 +142,129 @@ export default function PresupuestoClient() {
   const [alumnosStr, setAlumnosStr] = useState("");
   const alumnos = useMemo(() => toIntSafe(alumnosStr, 0), [alumnosStr]);
 
+  const [couponCode, setCouponCode] = useState("");
+  const couponNorm = useMemo(() => normalizeCoupon(couponCode), [couponCode]);
+
   const isDigital = modalidad?.startsWith("digital") ?? false;
 
-  const unitPrice = useMemo(() => {
-    if (!modalidad) return 0;
-    return PRICE[modalidad];
+  // ✅ quote server-side
+  const [quote, setQuote] = useState<QuoteResponse | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [couponInvalid, setCouponInvalid] = useState(false);
+
+  useEffect(() => {
+    try {
+      const p = localStorage.getItem(LS_PROVINCIA) || "";
+      const m = (localStorage.getItem(LS_MODALIDAD) || "") as ModalidadOrla | "";
+      if (p) setProvincia(p);
+      if (m) setModalidad(m || null);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (modalidad) return;
+    if (tipoQS === "adhoc") setModalidad("local_exclusiva");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipoQS]);
+
+  useEffect(() => {
+    if (!tpl) return;
+    if (!provinciaOk) return;
+    if (modalidad) return;
+    setModalidad(esLocal ? "local_plantilla" : "digital_plantilla");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tpl, provinciaOk, esLocal]);
+
+  useEffect(() => {
+    try {
+      if (provincia) localStorage.setItem(LS_PROVINCIA, provincia);
+    } catch {}
+  }, [provincia]);
+
+  useEffect(() => {
+    try {
+      if (modalidad) localStorage.setItem(LS_MODALIDAD, modalidad);
+    } catch {}
   }, [modalidad]);
 
+  useEffect(() => {
+    if (!provinciaOk) return;
+
+    if (esLocal) {
+      if (modalidad?.startsWith("digital")) setModalidad(null);
+    } else {
+      if (modalidad?.startsWith("local")) setModalidad(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [provinciaOk, esLocal]);
+
+  // ✅ Extras detalle SOLO para mostrar líneas (el total lo da el servidor)
   const extrasDetalle = useMemo(() => {
     const qty = alumnos > 0 ? alumnos : 0;
-
     const lines = [
-      extraBeca
-        ? {
-            key: "beca",
-            label: "Beca de graduación personalizada (cole)",
-            unit: PRICE.extra_beca,
-            qty,
-            total: qty * PRICE.extra_beca,
-          }
-        : null,
-      extraTaza
-        ? {
-            key: "taza",
-            label: "Taza con foto",
-            unit: PRICE.extra_taza,
-            qty,
-            total: qty * PRICE.extra_taza,
-          }
-        : null,
-      extraSobre
-        ? {
-            key: "sobre",
-            label: "Sobres reforzados con nombre",
-            unit: PRICE.extra_sobre,
-            qty,
-            total: qty * PRICE.extra_sobre,
-          }
-        : null,
-      extraFotosRecuerdo
-        ? {
-            key: "fotos",
-            label: "Fotos de recuerdo",
-            unit: PRICE.extra_fotos_recuerdo,
-            qty,
-            total: qty * PRICE.extra_fotos_recuerdo,
-          }
-        : null,
+      extraBeca ? { key: "beca", label: "Beca de graduación personalizada (cole)", unit: PRICE.extra_beca, qty, total: qty * PRICE.extra_beca } : null,
+      extraTaza ? { key: "taza", label: "Taza con foto", unit: PRICE.extra_taza, qty, total: qty * PRICE.extra_taza } : null,
+      extraSobre ? { key: "sobre", label: "Sobres reforzados con nombre", unit: PRICE.extra_sobre, qty, total: qty * PRICE.extra_sobre } : null,
+      extraFotosRecuerdo ? { key: "fotos", label: "Fotos de recuerdo", unit: PRICE.extra_fotos_recuerdo, qty, total: qty * PRICE.extra_fotos_recuerdo } : null,
     ].filter(Boolean) as Array<{ key: string; label: string; unit: number; qty: number; total: number }>;
 
-    return lines.map((l) => ({
-      ...l,
-      unit: round2(l.unit),
-      total: round2(l.total),
-    }));
+    return lines.map((l) => ({ ...l, unit: round2(l.unit), total: round2(l.total) }));
   }, [extraBeca, extraTaza, extraSobre, extraFotosRecuerdo, alumnos]);
 
   const hayExtras = extrasDetalle.length > 0;
 
-  const calc = useMemo(() => {
-    const baseSinIva = alumnos * unitPrice;
+  // ✅ Fetch quote (debounced)
+  useEffect(() => {
+    const canQuote = !!modalidad && alumnos > 0;
+    if (!canQuote) {
+      setQuote(null);
+      setCouponInvalid(false);
+      return;
+    }
 
-    const extrasSinIva =
-      alumnos * (extraBeca ? PRICE.extra_beca : 0) +
-      alumnos * (extraTaza ? PRICE.extra_taza : 0) +
-      alumnos * (extraSobre ? PRICE.extra_sobre : 0) +
-      alumnos * (extraFotosRecuerdo ? PRICE.extra_fotos_recuerdo : 0);
+    const ac = new AbortController();
+    const t = setTimeout(async () => {
+      setQuoteLoading(true);
+      setCouponInvalid(false);
 
-    const envioSinIva = isDigital && alumnos > 0 ? PRICE.envio_nacional : 0;
+      try {
+        const res = await fetch("/api/quote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: ac.signal,
+          body: JSON.stringify({
+            alumnos,
+            modalidad,
+            couponCode: couponNorm,
+            extras: {
+              beca_graduacion: extraBeca,
+              taza: extraTaza,
+              sobre_reforzado: extraSobre,
+              fotos_recuerdo: extraFotosRecuerdo,
+            },
+          }),
+        });
 
-    const subtotalSinIva = baseSinIva + extrasSinIva + envioSinIva;
+        if (!res.ok) throw new Error("quote_error");
+        const data = (await res.json()) as QuoteResponse;
 
-    // ✅ aplicar cupón ANTES de IVA
-    const { couponApplied, discountSinIva, subtotalConDescuentoSinIva } = applyCoupon(subtotalSinIva, couponCode);
+        setQuote(data);
+        setCouponInvalid(!!couponNorm && data.couponProvided && !data.couponValid);
+      } catch {
+        if (!ac.signal.aborted) {
+          setQuote(null);
+          setCouponInvalid(false);
+        }
+      } finally {
+        if (!ac.signal.aborted) setQuoteLoading(false);
+      }
+    }, 250);
 
-    const iva = subtotalConDescuentoSinIva * (PRICE.iva_pct / 100);
-    const totalConIva = subtotalConDescuentoSinIva + iva;
-
-    return {
-      unitBase: round2(unitPrice),
-      baseSinIva: round2(baseSinIva),
-      extrasSinIva: round2(extrasSinIva),
-      envioSinIva: round2(envioSinIva),
-
-      subtotalSinIva: round2(subtotalSinIva),
-
-      // ✅ cupón
-      couponApplied,
-      discountSinIva: round2(discountSinIva),
-      subtotalConDescuentoSinIva: round2(subtotalConDescuentoSinIva),
-
-      ivaPct: PRICE.iva_pct,
-      iva: round2(iva),
-      totalConIva: round2(totalConIva),
+    return () => {
+      ac.abort();
+      clearTimeout(t);
     };
-  }, [alumnos, unitPrice, extraBeca, extraTaza, extraSobre, extraFotosRecuerdo, isDigital, couponCode]);
+  }, [alumnos, modalidad, extraBeca, extraTaza, extraSobre, extraFotosRecuerdo, couponNorm]);
 
   const clearError = (k: FieldKey) => {
     setErrors((prev) => {
@@ -378,7 +276,6 @@ export default function PresupuestoClient() {
     setFormMsg("");
     if (status === "error") setStatus("idle");
   };
-
   const errorClass = (k: FieldKey) => (errors[k] ? "inputError" : "");
 
   const equalBtn: React.CSSProperties = {
@@ -394,22 +291,16 @@ export default function PresupuestoClient() {
   const modalidadLabel = useMemo(() => {
     if (!modalidad) return "";
     switch (modalidad) {
-      case "local_plantilla":
-        return "Presencial · Plantilla";
-      case "local_exclusiva":
-        return "Presencial · Exclusiva";
-      case "digital_plantilla":
-        return "Digital · Plantilla";
-      case "digital_exclusiva":
-        return "Digital · Exclusiva";
+      case "local_plantilla": return "Presencial · Plantilla";
+      case "local_exclusiva": return "Presencial · Exclusiva";
+      case "digital_plantilla": return "Digital · Plantilla";
+      case "digital_exclusiva": return "Digital · Exclusiva";
     }
   }, [modalidad]);
 
-  // ✅ Bloqueo: si es plantilla, obligamos a tener tpl
   const requierePlantilla = !!modalidad && modalidad.endsWith("plantilla");
   const faltaPlantilla = requierePlantilla && !tpl;
 
-  // --- UI: Paso 1 provincia ---
   const ProvinciaCard = (
     <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
       <div style={{ fontWeight: 900 }}>Provincia del centro *</div>
@@ -436,9 +327,7 @@ export default function PresupuestoClient() {
           >
             <option value="">Selecciona provincia…</option>
             {PROVINCIAS.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
+              <option key={p} value={p}>{p}</option>
             ))}
           </select>
         </Field>
@@ -446,7 +335,6 @@ export default function PresupuestoClient() {
     </div>
   );
 
-  // --- UI: Paso 2 elegir modalidad según provincia ---
   const ChoiceCard = (
     <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
       {esLocal ? (
@@ -456,14 +344,7 @@ export default function PresupuestoClient() {
             Incluye fotos <i>in situ</i>, retoque, maquetación e impresión A3 en alta calidad (entrega en mano).
           </div>
 
-          <div
-            style={{
-              marginTop: 14,
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
-              gap: 14,
-            }}
-          >
+          <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 14 }}>
             <div style={choiceCard}>
               <div>
                 <div style={choiceHeader}>
@@ -474,16 +355,12 @@ export default function PresupuestoClient() {
                   Eliges una plantilla y la adaptamos a tu centro (nombres, logos, composición y revisión final).
                 </div>
               </div>
-
               <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
                 <button
                   type="button"
                   className="btnPrimary"
                   style={equalBtn}
-                  onClick={() => {
-                    setModalidad("local_plantilla");
-                    goPlantillas();
-                  }}
+                  onClick={() => { setModalidad("local_plantilla"); goPlantillas(); }}
                 >
                   Ver plantillas
                 </button>
@@ -500,7 +377,6 @@ export default function PresupuestoClient() {
                   Diseñamos una orla única desde cero según temática/estilo.
                 </div>
               </div>
-
               <div style={{ marginTop: 12, display: "grid" }}>
                 <button type="button" className="btnPrimary" style={equalBtn} onClick={() => setModalidad("local_exclusiva")}>
                   Quiero exclusiva
@@ -519,14 +395,7 @@ export default function PresupuestoClient() {
             <b>Transporte (aprox.): +{PRICE.envio_nacional} €</b> por pedido.
           </div>
 
-          <div
-            style={{
-              marginTop: 14,
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
-              gap: 14,
-            }}
-          >
+          <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 14 }}>
             <div style={choiceCard}>
               <div>
                 <div style={choiceHeader}>
@@ -537,16 +406,12 @@ export default function PresupuestoClient() {
                   Eliges una plantilla y la adaptamos a tu centro. (Fotos las hace el cole).
                 </div>
               </div>
-
               <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
                 <button
                   type="button"
                   className="btnPrimary"
                   style={equalBtn}
-                  onClick={() => {
-                    setModalidad("digital_plantilla");
-                    goPlantillas();
-                  }}
+                  onClick={() => { setModalidad("digital_plantilla"); goPlantillas(); }}
                 >
                   Ver plantillas
                 </button>
@@ -566,7 +431,6 @@ export default function PresupuestoClient() {
                   Diseñamos una orla única desde cero. (Fotos las hace el cole).
                 </div>
               </div>
-
               <div style={{ marginTop: 12, display: "grid" }}>
                 <button type="button" className="btnPrimary" style={equalBtn} onClick={() => setModalidad("digital_exclusiva")}>
                   Quiero exclusiva digital
@@ -586,46 +450,20 @@ export default function PresupuestoClient() {
           border: 1px solid #ef4444 !important;
           box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
         }
-        .tipWrap {
-          position: relative;
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-        }
+        .tipWrap { position: relative; display: inline-flex; align-items: center; gap: 8px; }
         .tipIcon {
-          width: 18px;
-          height: 18px;
-          border-radius: 999px;
-          border: 1px solid var(--border);
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          font-weight: 900;
-          font-size: 12px;
-          color: var(--brand-hover);
-          background: white;
-          cursor: help;
-          user-select: none;
+          width: 18px; height: 18px; border-radius: 999px; border: 1px solid var(--border);
+          display: inline-flex; align-items: center; justify-content: center;
+          font-weight: 900; font-size: 12px; color: var(--brand-hover);
+          background: white; cursor: help; user-select: none;
         }
         .tipBox {
-          position: absolute;
-          left: 0;
-          top: 26px;
-          width: min(320px, 78vw);
-          background: white;
-          border: 1px solid var(--border);
-          border-radius: 12px;
-          padding: 10px 12px;
-          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
-          color: var(--text);
-          line-height: 1.45;
-          font-size: 13px;
-          display: none;
-          z-index: 20;
+          position: absolute; left: 0; top: 26px; width: min(320px, 78vw);
+          background: white; border: 1px solid var(--border); border-radius: 12px;
+          padding: 10px 12px; box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+          color: var(--text); line-height: 1.45; font-size: 13px; display: none; z-index: 20;
         }
-        .tipWrap:hover .tipBox {
-          display: block;
-        }
+        .tipWrap:hover .tipBox { display: block; }
       `}</style>
 
       <div className="badge">Presupuesto · Validez 15 días · IVA 21%</div>
@@ -635,18 +473,14 @@ export default function PresupuestoClient() {
         Primero provincia. Luego eliges plantilla o exclusiva según la modalidad disponible.
       </p>
 
-      {/* PASO 1 */}
       {ProvinciaCard}
 
-      {/* Si no hay provincia, no seguimos */}
       {!provinciaOk ? null : (
         <>
-          {/* PASO 2 */}
           {!modalidad ? (
             ChoiceCard
           ) : (
             <>
-              {/* Banner selección */}
               <div className="card" style={{ marginTop: 14, background: "var(--brand-soft)" }}>
                 <div style={{ fontWeight: 900 }}>Selección</div>
                 <div style={{ marginTop: 8, color: "var(--muted)", lineHeight: 1.6 }}>
@@ -659,37 +493,25 @@ export default function PresupuestoClient() {
                   )}
                 </div>
 
-                {/* Plantilla (si aplica) */}
                 {modalidad.endsWith("plantilla") && tpl && (
                   <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={encodeURI(tpl)}
                       alt={prettyTplName(tpl)}
-                      style={{
-                        width: 120,
-                        height: 78,
-                        objectFit: "cover",
-                        borderRadius: 12,
-                        border: "1px solid var(--border)",
-                      }}
+                      style={{ width: 120, height: 78, objectFit: "cover", borderRadius: 12, border: "1px solid var(--border)" }}
                     />
                     <div>
                       <div style={{ fontWeight: 900 }}>{prettyTplName(tpl)}</div>
                       <div style={{ color: "var(--muted)", fontSize: 13 }}>{cat ? `Categoría: ${cat}` : ""}</div>
                       <div style={{ marginTop: 8, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                        <button type="button" className="btnOutline" onClick={goPlantillas}>
-                          Cambiar plantilla
-                        </button>
-                        <button type="button" className="btnOutline" onClick={() => setModalidad(null)}>
-                          Cambiar modalidad
-                        </button>
+                        <button type="button" className="btnOutline" onClick={goPlantillas}>Cambiar plantilla</button>
+                        <button type="button" className="btnOutline" onClick={() => setModalidad(null)}>Cambiar modalidad</button>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Si es plantilla y no hay tpl */}
                 {modalidad.endsWith("plantilla") && !tpl && (
                   <div style={{ marginTop: 12 }}>
                     <div style={warnBox}>
@@ -697,22 +519,15 @@ export default function PresupuestoClient() {
                       presupuesto.
                     </div>
                     <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                      <button type="button" className="btnPrimary" onClick={goPlantillas}>
-                        Ver plantillas
-                      </button>
-                      <button type="button" className="btnOutline" onClick={() => setModalidad(null)}>
-                        Cambiar modalidad
-                      </button>
+                      <button type="button" className="btnPrimary" onClick={goPlantillas}>Ver plantillas</button>
+                      <button type="button" className="btnOutline" onClick={() => setModalidad(null)}>Cambiar modalidad</button>
                     </div>
                   </div>
                 )}
 
-                {/* Exclusiva */}
                 {modalidad.endsWith("exclusiva") && (
                   <div style={{ marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    <button type="button" className="btnOutline" onClick={() => setModalidad(null)}>
-                      Cambiar modalidad
-                    </button>
+                    <button type="button" className="btnOutline" onClick={() => setModalidad(null)}>Cambiar modalidad</button>
                   </div>
                 )}
               </div>
@@ -748,9 +563,6 @@ export default function PresupuestoClient() {
                     const email = normalizeEmail(String(formData.get("email") || ""));
                     const telefonoRaw = String(formData.get("telefono") || "").trim();
 
-                    const couponRaw = normalizeCoupon(String(formData.get("cupon") || ""));
-                    const couponExists = couponRaw ? !!findCoupon(couponRaw) : true; // si está vacío, ok
-
                     const nextErrors: Errors = {};
                     if (!provincia) nextErrors.provincia = "Selecciona una provincia.";
                     if (!modalidad) nextErrors.provincia = "Selecciona provincia y modalidad.";
@@ -762,7 +574,12 @@ export default function PresupuestoClient() {
                     else if (!isValidPhoneES(telefonoRaw)) nextErrors.telefono = "El teléfono debe tener 9 dígitos.";
                     if (alumnosN <= 0) nextErrors.alumnos = "Indica el número de alumnos.";
 
-                    if (couponRaw && !couponExists) nextErrors.cupon = "Cupón no válido.";
+                    if (couponInvalid) nextErrors.cupon = "Cupón no válido.";
+
+                    if (!quote || quoteLoading) {
+                      setFormMsg("Calculando el presupuesto… espera un segundo y vuelve a enviar.");
+                      return;
+                    }
 
                     if (Object.keys(nextErrors).length > 0) {
                       setErrors(nextErrors);
@@ -792,29 +609,26 @@ export default function PresupuestoClient() {
 
                       estado: estado,
 
-                      // ✅ campos claros para Sheets
                       tipo_orla: modalidad.startsWith("digital") ? "digital" : "presencial",
                       modalidad_orla: modalidad,
 
                       alumnos: alumnosN,
                       precios: {
-                        unitario: calc.unitBase,
-                        transporte_aprox: calc.envioSinIva,
-                        iva_pct: calc.ivaPct,
+                        unitario: quote.unitBase,
+                        transporte_aprox: quote.envioSinIva,
+                        iva_pct: quote.ivaPct,
 
-                        subtotal_sin_iva: calc.subtotalSinIva,
+                        subtotal_sin_iva: quote.subtotalSinIva,
 
-                        // ✅ cupón (nuevo)
-                        cupon: calc.couponApplied || "",
-                        descuento_sin_iva: calc.discountSinIva,
-                        subtotal_con_descuento_sin_iva: calc.subtotalConDescuentoSinIva,
+                        cupon: quote.couponApplied || "",
+                        descuento_sin_iva: quote.discountSinIva,
+                        subtotal_con_descuento_sin_iva: quote.subtotalConDescuentoSinIva,
 
-                        total_con_iva: calc.totalConIva,
+                        total_con_iva: quote.totalConIva,
 
                         nota_extras: hayExtras ? EXTRAS_DISCLAIMER : "",
                       },
 
-                      // ✅ por si lo quieres directo en el email/template
                       nota_presupuesto: hayExtras ? EXTRAS_DISCLAIMER : "",
 
                       extras: {
@@ -824,7 +638,6 @@ export default function PresupuestoClient() {
                         fotos_recuerdo: extraFotosRecuerdo,
                       },
 
-                      // Plantilla (si existe)
                       plantilla_url: tpl || "",
                       categoria_plantilla: cat || "",
                     };
@@ -943,13 +756,18 @@ export default function PresupuestoClient() {
                       name="cupon"
                       placeholder="Código promocional"
                       style={inp}
-                      className={errorClass("cupon")}
+                      className={`${errorClass("cupon")} ${couponInvalid ? "inputError" : ""}`}
                       value={couponCode}
                       onChange={(e) => {
                         setCouponCode(e.target.value);
                         clearError("cupon");
                       }}
                     />
+                    {couponInvalid && (
+                      <div style={{ marginTop: 8, color: "#7f1d1d", fontWeight: 900 }}>
+                        ❌ Cupón no válido.
+                      </div>
+                    )}
                   </Field>
 
                   <div style={{ display: "grid", gap: 6 }}>
@@ -986,42 +804,27 @@ export default function PresupuestoClient() {
 
                     <label style={checkRow}>
                       <input type="checkbox" checked={extraBeca} onChange={(e) => setExtraBeca(e.target.checked)} />
-                      <span>
-                        Beca de graduación personalizada (cole) — <b>{PRICE.extra_beca.toFixed(2)} €</b> / niñ@
-                      </span>
+                      <span>Beca de graduación personalizada (cole) — <b>{PRICE.extra_beca.toFixed(2)} €</b> / niñ@</span>
                     </label>
 
                     <label style={checkRow}>
                       <input type="checkbox" checked={extraTaza} onChange={(e) => setExtraTaza(e.target.checked)} />
-                      <span>
-                        Taza con foto — <b>{PRICE.extra_taza.toFixed(2)} €</b> / niñ@
-                      </span>
+                      <span>Taza con foto — <b>{PRICE.extra_taza.toFixed(2)} €</b> / niñ@</span>
                     </label>
 
                     <label style={checkRow}>
                       <input type="checkbox" checked={extraSobre} onChange={(e) => setExtraSobre(e.target.checked)} />
-                      <span>
-                        Sobres reforzados con nombre — <b>{PRICE.extra_sobre.toFixed(2)} €</b> / niñ@
-                      </span>
+                      <span>Sobres reforzados con nombre — <b>{PRICE.extra_sobre.toFixed(2)} €</b> / niñ@</span>
                     </label>
 
                     <label style={checkRow}>
-                      <input
-                        type="checkbox"
-                        checked={extraFotosRecuerdo}
-                        onChange={(e) => setExtraFotosRecuerdo(e.target.checked)}
-                      />
+                      <input type="checkbox" checked={extraFotosRecuerdo} onChange={(e) => setExtraFotosRecuerdo(e.target.checked)} />
                       <span className="tipWrap">
-                        <span>
-                          Fotos de recuerdo — <b>{PRICE.extra_fotos_recuerdo.toFixed(2)} €</b> / alumno
-                        </span>
-                        <span className="tipIcon" aria-label="Más info" title="Más info">
-                          i
-                        </span>
+                        <span>Fotos de recuerdo — <b>{PRICE.extra_fotos_recuerdo.toFixed(2)} €</b> / alumno</span>
+                        <span className="tipIcon" aria-label="Más info" title="Más info">i</span>
                         <span className="tipBox">
                           Pack de fotos individuales para las familias (ideal como recuerdo).
-                          <br />
-                          <b>Se calcula por alumno</b>.
+                          <br /><b>Se calcula por alumno</b>.
                         </span>
                       </span>
                     </label>
@@ -1029,81 +832,80 @@ export default function PresupuestoClient() {
 
                   <div className="card" style={{ background: "white", border: "1px solid var(--border)" }}>
                     <div style={{ fontWeight: 900, marginBottom: 8 }}>Resumen</div>
-                    <div style={{ display: "grid", gap: 6, color: "var(--muted)" }}>
-                      <div>
-                        Modalidad: <b style={{ color: "var(--text)" }}>{modalidadLabel}</b>
-                      </div>
-                      <div>
-                        Precio unitario: <b style={{ color: "var(--text)" }}>{eur(calc.unitBase)}</b> / alumno
-                      </div>
 
-                      {extrasDetalle.length > 0 && (
-                        <div style={{ marginTop: 6 }}>
-                          <div style={{ fontWeight: 900, color: "var(--text)", marginBottom: 6 }}>Extras</div>
-                          <div style={{ display: "grid", gap: 6 }}>
-                            {extrasDetalle.map((x) => (
-                              <div key={x.key} style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                                <div>
-                                  <span style={{ color: "var(--text)", fontWeight: 800 }}>{x.label}</span>
-                                  <span>
-                                    {" "}
-                                    — {eur(x.unit)} / alumno · {x.qty} alumno{x.qty === 1 ? "" : "s"}
-                                  </span>
+                    {!quote && alumnos > 0 && modalidad && (
+                      <div style={{ color: "var(--muted)" }}>
+                        {quoteLoading ? "Calculando…" : "No se pudo calcular. Revisa conexión."}
+                      </div>
+                    )}
+
+                    {quote && (
+                      <div style={{ display: "grid", gap: 6, color: "var(--muted)" }}>
+                        <div>Modalidad: <b style={{ color: "var(--text)" }}>{modalidadLabel}</b></div>
+                        <div>Precio unitario: <b style={{ color: "var(--text)" }}>{eur(quote.unitBase)}</b> / alumno</div>
+
+                        {extrasDetalle.length > 0 && (
+                          <div style={{ marginTop: 6 }}>
+                            <div style={{ fontWeight: 900, color: "var(--text)", marginBottom: 6 }}>Extras</div>
+                            <div style={{ display: "grid", gap: 6 }}>
+                              {extrasDetalle.map((x) => (
+                                <div key={x.key} style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                                  <div>
+                                    <span style={{ color: "var(--text)", fontWeight: 800 }}>{x.label}</span>
+                                    <span> — {eur(x.unit)} / alumno · {x.qty} alumno{x.qty === 1 ? "" : "s"}</span>
+                                  </div>
+                                  <b style={{ color: "var(--text)" }}>{eur(x.total)}</b>
                                 </div>
-                                <b style={{ color: "var(--text)" }}>{eur(x.total)}</b>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
+                            <div style={{ marginTop: 10 }}>
+                              <div style={noteBox}>ℹ️ {EXTRAS_DISCLAIMER}</div>
+                            </div>
                           </div>
+                        )}
 
-                          {/* ✅ Copy orientativo SOLO si hay extras */}
-                          <div style={{ marginTop: 10 }}>
-                            <div style={noteBox}>ℹ️ {EXTRAS_DISCLAIMER}</div>
+                        {quote.envioSinIva > 0 && (
+                          <div style={{ marginTop: extrasDetalle.length > 0 ? 6 : 0 }}>
+                            Transporte (aprox.): <b style={{ color: "var(--text)" }}>{Math.round(quote.envioSinIva)} €</b> / pedido
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {calc.envioSinIva > 0 && (
-                        <div style={{ marginTop: extrasDetalle.length > 0 ? 6 : 0 }}>
-                          Transporte (aprox.): <b style={{ color: "var(--text)" }}>{Math.round(calc.envioSinIva)} €</b> / pedido
-                        </div>
-                      )}
+                        <div>Subtotal (sin IVA): <b style={{ color: "var(--text)" }}>{eur(quote.subtotalSinIva)}</b></div>
 
-                      <div>
-                        Subtotal (sin IVA): <b style={{ color: "var(--text)" }}>{eur(calc.subtotalSinIva)}</b>
+                        {quote.discountSinIva > 0 && (
+                          <>
+                            <div>
+                              Descuento {quote.couponApplied ? `(${quote.couponApplied})` : ""}:{" "}
+                              <b style={{ color: "var(--text)" }}>-{eur(quote.discountSinIva)}</b>
+                            </div>
+                            <div>
+                              Subtotal con descuento (sin IVA):{" "}
+                              <b style={{ color: "var(--text)" }}>{eur(quote.subtotalConDescuentoSinIva)}</b>
+                            </div>
+                          </>
+                        )}
+
+                        <div>IVA ({quote.ivaPct}%): <b style={{ color: "var(--text)" }}>{eur(quote.iva)}</b></div>
+                        <div style={{ fontSize: 16 }}>
+                          Total: <b style={{ color: "var(--brand-hover)" }}>{eur(quote.totalConIva)}</b>
+                        </div>
                       </div>
-
-                      {/* ✅ DESCUENTO */}
-                      {calc.discountSinIva > 0 && (
-                        <div>
-                          Descuento {calc.couponApplied ? `(${calc.couponApplied})` : ""}:{" "}
-                          <b style={{ color: "var(--text)" }}>-{eur(calc.discountSinIva)}</b>
-                        </div>
-                      )}
-
-                      {/* ✅ Subtotal tras descuento */}
-                      {calc.discountSinIva > 0 && (
-                        <div>
-                          Subtotal con descuento (sin IVA):{" "}
-                          <b style={{ color: "var(--text)" }}>{eur(calc.subtotalConDescuentoSinIva)}</b>
-                        </div>
-                      )}
-
-                      <div>
-                        IVA ({calc.ivaPct}%): <b style={{ color: "var(--text)" }}>{eur(calc.iva)}</b>
-                      </div>
-                      <div style={{ fontSize: 16 }}>
-                        Total: <b style={{ color: "var(--brand-hover)" }}>{eur(calc.totalConIva)}</b>
-                      </div>
-                    </div>
+                    )}
                   </div>
 
                   <button
                     type="submit"
                     className="btnPrimary"
-                    disabled={status === "sending" || faltaPlantilla}
-                    style={{ opacity: status === "sending" || faltaPlantilla ? 0.75 : 1 }}
+                    disabled={status === "sending" || faltaPlantilla || quoteLoading || !quote}
+                    style={{ opacity: status === "sending" || faltaPlantilla || quoteLoading || !quote ? 0.75 : 1 }}
                   >
-                    {status === "sending" ? "Enviando..." : faltaPlantilla ? "Elige una plantilla para continuar" : "Enviar presupuesto"}
+                    {status === "sending"
+                      ? "Enviando..."
+                      : faltaPlantilla
+                      ? "Elige una plantilla para continuar"
+                      : quoteLoading || !quote
+                      ? "Calculando presupuesto…"
+                      : "Enviar presupuesto"}
                   </button>
 
                   {status === "sent" && <div style={okBox}>✅ Enviado. Te llegará por email con validez 15 días.</div>}
@@ -1112,12 +914,7 @@ export default function PresupuestoClient() {
               </div>
 
               <div style={{ marginTop: 14 }}>
-                <a
-                  href={WHATSAPP_LINK}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ color: "var(--brand-hover)", fontWeight: 900, textDecoration: "none" }}
-                >
+                <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer" style={{ color: "var(--brand-hover)", fontWeight: 900, textDecoration: "none" }}>
                   💬 Si prefieres, escribe directamente por WhatsApp
                 </a>
               </div>
