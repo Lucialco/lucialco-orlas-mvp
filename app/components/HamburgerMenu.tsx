@@ -54,6 +54,11 @@ export default function HamburgerMenu() {
             Lucía <span className="hm_chev">›</span>
           </Link>
 
+          {/* ✅ FAQ dentro del menú */}
+          <Link href="/faq" onClick={() => setOpen(false)} className="hm_item">
+            Preguntas frecuentes <span className="hm_chev">›</span>
+          </Link>
+
           <div className="hm_sep" />
 
           {/* Cambia a tu cuenta real cuando me la pases */}
@@ -234,4 +239,3 @@ export default function HamburgerMenu() {
     </>
   );
 }
-
