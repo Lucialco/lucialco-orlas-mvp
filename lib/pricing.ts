@@ -1,5 +1,7 @@
-export type ProvinciaZona = "MADRID_TOLEDO" | "OTRAS";
+import "server-only";
+import { getCoupon, applyCoupon } from "./coupons";
 
+export type ProvinciaZona = "MADRID_TOLEDO" | "OTRAS";
 export type QuoteTipo = "plantilla" | "exclusiva";
 
 export type QuoteInput = {
@@ -7,6 +9,7 @@ export type QuoteInput = {
   tipo: QuoteTipo;                 // plantilla / exclusiva
   zona: ProvinciaZona;             // Madrid/Toledo vs otras
   envio?: boolean;                 // si aplica transporte
+  couponCode?: string;             // ✅ nuevo
 };
 
 const IVA = 0.21;
@@ -27,16 +30,22 @@ const PRICE_PER_ALUMNO = {
 const SHIPPING = 15.0;
 
 export function calcQuote(input: QuoteInput) {
-  const { alumnos, tipo, zona, envio = true } = input;
+  const { alumnos, tipo, zona, envio = true, couponCode } = input;
 
   const unit = PRICE_PER_ALUMNO[zona][tipo];
   const base = alumnos * unit;
 
   const shipping = envio ? SHIPPING : 0;
 
-  const subtotal = base + shipping;
-  const iva = subtotal * IVA;
-  const total = subtotal + iva;
+  const subtotal = base + shipping; // sin IVA
+
+  // ✅ Cupón (sin IVA)
+  const coupon = getCoupon(couponCode);
+  const { discountSinIva, subtotalConDescuentoSinIva, couponApplied } =
+    applyCoupon(subtotal, coupon);
+
+  const iva = subtotalConDescuentoSinIva * IVA;
+  const total = subtotalConDescuentoSinIva + iva;
 
   const perAlumno = total / alumnos;
 
@@ -44,13 +53,18 @@ export function calcQuote(input: QuoteInput) {
     alumnos,
     tipo,
     zona,
-    unit,        // €/alumno sin IVA
-    base,        // sin IVA
-    shipping,    // sin IVA
-    subtotal,    // sin IVA
+    unit,                         // €/alumno sin IVA
+    base,                         // sin IVA
+    shipping,                     // sin IVA
+
+    subtotal,                     // sin IVA (antes de cupón)
+    discountSinIva,               // ✅ descuento sin IVA
+    subtotalConDescuentoSinIva,   // ✅ sin IVA (tras cupón)
+
     iva,
-    total,       // con IVA
-    perAlumno,   // con IVA
+    total,                        // con IVA
+    perAlumno,                    // con IVA
+
+    couponApplied,                // ✅ null o código
   };
 }
-
