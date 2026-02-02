@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import "./globals.css";
 import HamburgerMenu from "./components/HamburgerMenu";
-import ChatWidget from "./components/ChatWidget";
+// import ChatWidget from "./components/ChatWidget"; // ✅ Quitamos el bot
 
 const GTM_ID = "GTM-T9LNC454";
 
@@ -120,16 +120,33 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               />
             </Link>
 
-            {/* Hamburguesa (menú global) */}
-            <HamburgerMenu />
+            {/* ✅ Accesos rápidos + hamburguesa */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Link
+                href="/faq"
+                style={{
+                  fontWeight: 900,
+                  textDecoration: "none",
+                  color: "var(--brand-hover)",
+                  padding: "8px 10px",
+                  borderRadius: 12,
+                  border: "1px solid var(--border)",
+                  background: "white",
+                }}
+              >
+                FAQ
+              </Link>
+
+              <HamburgerMenu />
+            </div>
           </div>
         </header>
 
         {/* Contenido */}
         <main className="page">{children}</main>
 
-        {/* ✅ ChatWidget en TODAS las páginas */}
-        <ChatWidget />
+        {/* ✅ Quitamos el bot */}
+        {/* <ChatWidget /> */}
 
         {/* Footer */}
         <footer className="footer">
@@ -137,6 +154,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <div>© {new Date().getFullYear()} Lucialco Orlas</div>
 
             <div className="footerLinks">
+              <Link href="/faq">FAQ</Link>
+              <span>·</span>
               <Link href="/aviso-legal">Aviso legal</Link>
               <span>·</span>
               <Link href="/politica-privacidad">Política de privacidad</Link>
