@@ -1,15 +1,14 @@
-import "server-only";
-import { getCoupon, applyCoupon } from "./coupons";
+import { applyCoupon } from "./coupons";
 
 export type ProvinciaZona = "MADRID_TOLEDO" | "OTRAS";
 export type QuoteTipo = "plantilla" | "exclusiva";
 
 export type QuoteInput = {
-  alumnos: number;                 // nº alumnos (orlas)
-  tipo: QuoteTipo;                 // plantilla / exclusiva
-  zona: ProvinciaZona;             // Madrid/Toledo vs otras
-  envio?: boolean;                 // si aplica transporte
-  couponCode?: string;             // ✅ nuevo
+  alumnos: number; // nº alumnos (orlas)
+  tipo: QuoteTipo; // plantilla / exclusiva
+  zona: ProvinciaZona; // Madrid/Toledo vs otras
+  envio?: boolean; // si aplica transporte
+  couponCode?: string; // ✅ nuevo
 };
 
 const IVA = 0.21;
@@ -39,10 +38,9 @@ export function calcQuote(input: QuoteInput) {
 
   const subtotal = base + shipping; // sin IVA
 
-  // ✅ Cupón (sin IVA)
-  const coupon = getCoupon(couponCode);
-  const { discountSinIva, subtotalConDescuentoSinIva, couponApplied } =
-    applyCoupon(subtotal, coupon);
+  // ✅ Cupón (sin IVA) — applyCoupon espera STRING (código), no objeto Coupon
+  const { discountSinIva, subtotalConDescuentoSinIva, couponApplied, couponValid } =
+    applyCoupon(subtotal, couponCode);
 
   const iva = subtotalConDescuentoSinIva * IVA;
   const total = subtotalConDescuentoSinIva + iva;
@@ -53,18 +51,19 @@ export function calcQuote(input: QuoteInput) {
     alumnos,
     tipo,
     zona,
-    unit,                         // €/alumno sin IVA
-    base,                         // sin IVA
-    shipping,                     // sin IVA
+    unit, // €/alumno sin IVA
+    base, // sin IVA
+    shipping, // sin IVA
 
-    subtotal,                     // sin IVA (antes de cupón)
-    discountSinIva,               // ✅ descuento sin IVA
-    subtotalConDescuentoSinIva,   // ✅ sin IVA (tras cupón)
+    subtotal, // sin IVA (antes de cupón)
+    discountSinIva, // ✅ descuento sin IVA
+    subtotalConDescuentoSinIva, // ✅ sin IVA (tras cupón)
 
     iva,
-    total,                        // con IVA
-    perAlumno,                    // con IVA
+    total, // con IVA
+    perAlumno, // con IVA
 
-    couponApplied,                // ✅ null o código
+    couponApplied, // ✅ null o código aplicado
+    couponValid,   // ✅ true/false (por si quieres mostrar error)
   };
 }
