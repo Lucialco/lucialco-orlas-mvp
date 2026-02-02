@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { applyCoupon } from "@/lib/coupons";
+import { applyCoupon } from "../../../lib/coupons";
 
 export const runtime = "nodejs";
 
@@ -42,10 +42,17 @@ export async function POST(req: Request) {
   const extraFotos = !!extras.fotos_recuerdo;
 
   if (!modalidad) {
-    return NextResponse.json({ error: "modalidad requerida" }, { status: 400 });
+    return NextResponse.json(
+      { error: "modalidad requerida" },
+      { status: 400 }
+    );
   }
+
   if (!Number.isFinite(alumnos) || alumnos <= 0) {
-    return NextResponse.json({ error: "alumnos inválido" }, { status: 400 });
+    return NextResponse.json(
+      { error: "alumnos inválido" },
+      { status: 400 }
+    );
   }
 
   const unitBase = PRICE[modalidad];
@@ -62,7 +69,7 @@ export async function POST(req: Request) {
 
   const subtotalSinIva = baseSinIva + extrasSinIva + envioSinIva;
 
-  // ✅ cupón antes de IVA
+  // ✅ Aplicar cupón antes de IVA
   const coupon = applyCoupon(subtotalSinIva, couponCode);
 
   const iva = coupon.subtotalConDescuentoSinIva * (PRICE.iva_pct / 100);
@@ -71,17 +78,21 @@ export async function POST(req: Request) {
   return NextResponse.json({
     alumnos,
     modalidad,
+
     unitBase: round2(unitBase),
     baseSinIva: round2(baseSinIva),
     extrasSinIva: round2(extrasSinIva),
     envioSinIva: round2(envioSinIva),
+
     subtotalSinIva: round2(subtotalSinIva),
 
     couponProvided: coupon.couponProvided,
     couponValid: coupon.couponValid,
     couponApplied: coupon.couponApplied,
     discountSinIva: round2(coupon.discountSinIva),
-    subtotalConDescuentoSinIva: round2(coupon.subtotalConDescuentoSinIva),
+    subtotalConDescuentoSinIva: round2(
+      coupon.subtotalConDescuentoSinIva
+    ),
 
     ivaPct: PRICE.iva_pct,
     iva: round2(iva),
