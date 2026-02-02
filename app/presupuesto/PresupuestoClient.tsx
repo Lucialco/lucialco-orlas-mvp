@@ -87,12 +87,52 @@ const PRICE = {
 const EXTRAS_DISCLAIMER =
   "Nota: el precio de los extras es orientativo y está pendiente de confirmar detalles de acabados (por ejemplo, impresión y tonos de color).";
 
+// =======================
+// ✅ CUPONES (MVP)
+// =======================
+// ⚠️ Esto está en CLIENT porque tu cálculo es client-side.
+// Si quieres gestionar cupones sin desplegar, lo pasamos a /api/quote (server).
+type Coupon =
+  | { code: string; type: "percent"; value: number; active: boolean }
+  | { code: string; type: "amount"; value: number; active: boolean };
+
+const COUPONS: Coupon[] = [
+  { code: "LUCIA10", type: "percent", value: 10, active: true },
+  { code: "ORLA15", type: "amount", value: 15, active: true },
+];
+
+function normalizeCoupon(code: string) {
+  return String(code || "").trim().toUpperCase();
+}
+function findCoupon(codeRaw: string) {
+  const c = normalizeCoupon(codeRaw);
+  if (!c) return null;
+  return COUPONS.find((x) => x.active && normalizeCoupon(x.code) === c) || null;
+}
+function applyCoupon(subtotalSinIva: number, codeRaw: string) {
+  const coupon = findCoupon(codeRaw);
+  if (!coupon) return { couponApplied: null as string | null, discountSinIva: 0, subtotalConDescuentoSinIva: subtotalSinIva };
+
+  let discountSinIva =
+    coupon.type === "percent" ? subtotalSinIva * (coupon.value / 100) : coupon.value;
+
+  discountSinIva = Math.max(0, Math.min(discountSinIva, subtotalSinIva));
+
+  return {
+    couponApplied: normalizeCoupon(coupon.code),
+    discountSinIva: round2(discountSinIva),
+    subtotalConDescuentoSinIva: round2(subtotalSinIva - discountSinIva),
+  };
+}
+
+// =======================
+
 type Status = "idle" | "sending" | "sent" | "error";
 type EstadoPresupuesto = "informativo" | "interesado";
 
 type ModalidadOrla = "local_plantilla" | "local_exclusiva" | "digital_plantilla" | "digital_exclusiva";
 
-type FieldKey = "contacto" | "email" | "telefono" | "alumnos" | "provincia" | "plantilla";
+type FieldKey = "contacto" | "email" | "telefono" | "alumnos" | "provincia" | "plantilla" | "cupon";
 type Errors = Partial<Record<FieldKey, string>>;
 
 function toIntSafe(v: unknown, fallback = 0) {
@@ -162,6 +202,9 @@ export default function PresupuestoClient() {
 
   // Modalidad elegida (se decide DESPUÉS de provincia)
   const [modalidad, setModalidad] = useState<ModalidadOrla | null>(null);
+
+  // ✅ Cupón
+  const [couponCode, setCouponCode] = useState<string>("");
 
   // ✅ 1) Cargar provincia/modalidad guardadas
   useEffect(() => {
@@ -299,20 +342,31 @@ export default function PresupuestoClient() {
     const envioSinIva = isDigital && alumnos > 0 ? PRICE.envio_nacional : 0;
 
     const subtotalSinIva = baseSinIva + extrasSinIva + envioSinIva;
-    const iva = subtotalSinIva * (PRICE.iva_pct / 100);
-    const totalConIva = subtotalSinIva + iva;
+
+    // ✅ aplicar cupón ANTES de IVA
+    const { couponApplied, discountSinIva, subtotalConDescuentoSinIva } = applyCoupon(subtotalSinIva, couponCode);
+
+    const iva = subtotalConDescuentoSinIva * (PRICE.iva_pct / 100);
+    const totalConIva = subtotalConDescuentoSinIva + iva;
 
     return {
       unitBase: round2(unitPrice),
       baseSinIva: round2(baseSinIva),
       extrasSinIva: round2(extrasSinIva),
       envioSinIva: round2(envioSinIva),
+
       subtotalSinIva: round2(subtotalSinIva),
+
+      // ✅ cupón
+      couponApplied,
+      discountSinIva: round2(discountSinIva),
+      subtotalConDescuentoSinIva: round2(subtotalConDescuentoSinIva),
+
       ivaPct: PRICE.iva_pct,
       iva: round2(iva),
       totalConIva: round2(totalConIva),
     };
-  }, [alumnos, unitPrice, extraBeca, extraTaza, extraSobre, extraFotosRecuerdo, isDigital]);
+  }, [alumnos, unitPrice, extraBeca, extraTaza, extraSobre, extraFotosRecuerdo, isDigital, couponCode]);
 
   const clearError = (k: FieldKey) => {
     setErrors((prev) => {
@@ -694,6 +748,9 @@ export default function PresupuestoClient() {
                     const email = normalizeEmail(String(formData.get("email") || ""));
                     const telefonoRaw = String(formData.get("telefono") || "").trim();
 
+                    const couponRaw = normalizeCoupon(String(formData.get("cupon") || ""));
+                    const couponExists = couponRaw ? !!findCoupon(couponRaw) : true; // si está vacío, ok
+
                     const nextErrors: Errors = {};
                     if (!provincia) nextErrors.provincia = "Selecciona una provincia.";
                     if (!modalidad) nextErrors.provincia = "Selecciona provincia y modalidad.";
@@ -704,6 +761,8 @@ export default function PresupuestoClient() {
                     if (!telefonoRaw) nextErrors.telefono = "El teléfono es obligatorio.";
                     else if (!isValidPhoneES(telefonoRaw)) nextErrors.telefono = "El teléfono debe tener 9 dígitos.";
                     if (alumnosN <= 0) nextErrors.alumnos = "Indica el número de alumnos.";
+
+                    if (couponRaw && !couponExists) nextErrors.cupon = "Cupón no válido.";
 
                     if (Object.keys(nextErrors).length > 0) {
                       setErrors(nextErrors);
@@ -742,8 +801,16 @@ export default function PresupuestoClient() {
                         unitario: calc.unitBase,
                         transporte_aprox: calc.envioSinIva,
                         iva_pct: calc.ivaPct,
+
                         subtotal_sin_iva: calc.subtotalSinIva,
+
+                        // ✅ cupón (nuevo)
+                        cupon: calc.couponApplied || "",
+                        descuento_sin_iva: calc.discountSinIva,
+                        subtotal_con_descuento_sin_iva: calc.subtotalConDescuentoSinIva,
+
                         total_con_iva: calc.totalConIva,
+
                         nota_extras: hayExtras ? EXTRAS_DISCLAIMER : "",
                       },
 
@@ -783,6 +850,7 @@ export default function PresupuestoClient() {
                         setExtraSobre(false);
                         setExtraFotosRecuerdo(false);
                         setAlumnosStr("");
+                        setCouponCode("");
                         setTimeout(() => router.push("/"), 2500);
                       } else {
                         setStatus("error");
@@ -866,6 +934,21 @@ export default function PresupuestoClient() {
                       style={inp}
                       className={errorClass("email")}
                       onChange={() => clearError("email")}
+                    />
+                  </Field>
+
+                  {/* ✅ CUPÓN */}
+                  <Field label="Cupón (opcional)">
+                    <input
+                      name="cupon"
+                      placeholder="Código promocional"
+                      style={inp}
+                      className={errorClass("cupon")}
+                      value={couponCode}
+                      onChange={(e) => {
+                        setCouponCode(e.target.value);
+                        clearError("cupon");
+                      }}
                     />
                   </Field>
 
@@ -988,6 +1071,23 @@ export default function PresupuestoClient() {
                       <div>
                         Subtotal (sin IVA): <b style={{ color: "var(--text)" }}>{eur(calc.subtotalSinIva)}</b>
                       </div>
+
+                      {/* ✅ DESCUENTO */}
+                      {calc.discountSinIva > 0 && (
+                        <div>
+                          Descuento {calc.couponApplied ? `(${calc.couponApplied})` : ""}:{" "}
+                          <b style={{ color: "var(--text)" }}>-{eur(calc.discountSinIva)}</b>
+                        </div>
+                      )}
+
+                      {/* ✅ Subtotal tras descuento */}
+                      {calc.discountSinIva > 0 && (
+                        <div>
+                          Subtotal con descuento (sin IVA):{" "}
+                          <b style={{ color: "var(--text)" }}>{eur(calc.subtotalConDescuentoSinIva)}</b>
+                        </div>
+                      )}
+
                       <div>
                         IVA ({calc.ivaPct}%): <b style={{ color: "var(--text)" }}>{eur(calc.iva)}</b>
                       </div>
@@ -1133,7 +1233,3 @@ const choicePrice: React.CSSProperties = {
   color: "var(--brand-hover)",
   whiteSpace: "nowrap",
 };
-
-
-
-
