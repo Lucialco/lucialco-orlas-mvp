@@ -12,8 +12,8 @@ export function getCoupon(codeRaw?: string | null): Coupon | null {
   if (!codeRaw) return null;
 
   const raw = process.env.LUCIALCO_COUPONS_JSON || "[]";
-  let coupons: Coupon[] = [];
 
+  let coupons: Coupon[] = [];
   try {
     coupons = JSON.parse(raw);
   } catch {
@@ -21,30 +21,49 @@ export function getCoupon(codeRaw?: string | null): Coupon | null {
   }
 
   const code = normalize(codeRaw);
-
-  const found = coupons.find(
-    (c) => normalize(c.code) === code && c.active
-  );
-
+  const found = coupons.find((c) => c.active && normalize(c.code) === code);
   return found || null;
 }
 
-export function applyCoupon(subtotalSinIva: number, coupon: Coupon | null) {
-  if (!coupon) {
-    return { discountSinIva: 0, subtotalConDescuentoSinIva: subtotalSinIva, couponApplied: null as string | null };
+export function applyCoupon(subtotalSinIva: number, codeRaw?: string | null) {
+  const code = normalize(codeRaw || "");
+  if (!code) {
+    return {
+      couponProvided: false,
+      couponValid: true,
+      couponApplied: null as string | null,
+      discountSinIva: 0,
+      subtotalConDescuentoSinIva: subtotalSinIva,
+    };
   }
 
-  let discountSinIva =
+  const coupon = getCoupon(code);
+  if (!coupon) {
+    return {
+      couponProvided: true,
+      couponValid: false,
+      couponApplied: null as string | null,
+      discountSinIva: 0,
+      subtotalConDescuentoSinIva: subtotalSinIva,
+    };
+  }
+
+  let discount =
     coupon.type === "percent"
       ? subtotalSinIva * (coupon.value / 100)
       : coupon.value;
 
-  // Nunca puede superar el subtotal
-  discountSinIva = Math.max(0, Math.min(discountSinIva, subtotalSinIva));
+  discount = Math.max(0, Math.min(discount, subtotalSinIva));
 
   return {
-    discountSinIva,
-    subtotalConDescuentoSinIva: subtotalSinIva - discountSinIva,
-    couponApplied: coupon.code.trim().toUpperCase(),
+    couponProvided: true,
+    couponValid: true,
+    couponApplied: normalize(coupon.code),
+    discountSinIva: round2(discount),
+    subtotalConDescuentoSinIva: round2(subtotalSinIva - discount),
   };
+}
+
+function round2(n: number) {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
 }
