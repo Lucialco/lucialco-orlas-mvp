@@ -120,23 +120,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               />
             </Link>
 
-            {/* ✅ Accesos rápidos + hamburguesa */}
+            {/* ✅ Solo hamburguesa (FAQ va dentro del menú) */}
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Link
-                href="/faq"
-                style={{
-                  fontWeight: 900,
-                  textDecoration: "none",
-                  color: "var(--brand-hover)",
-                  padding: "8px 10px",
-                  borderRadius: 12,
-                  border: "1px solid var(--border)",
-                  background: "white",
-                }}
-              >
-                FAQ
-              </Link>
-
               <HamburgerMenu />
             </div>
           </div>
