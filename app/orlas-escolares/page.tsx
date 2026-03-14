@@ -26,6 +26,26 @@ export default function Page() {
         personalizado adaptado a los colores y estilo del centro.
       </p>
 
+      <h2>Graduaciones de infantil, primaria y secundaria</h2>
+
+      <p>
+        Muchos colegios organizan varias graduaciones el mismo año: infantil,
+        primaria y en algunos casos secundaria. Cuando el centro realiza varias
+        orlas con nosotros podemos ofrecer condiciones especiales para el
+        conjunto del proyecto.
+      </p>
+
+      <p>
+        Esto permite mantener una coherencia visual entre todas las promociones
+        y simplificar la organización del diseño de las orlas.
+      </p>
+
+      <p>
+        Si vuestro colegio organiza varias graduaciones el mismo curso podéis
+        consultarnos y os prepararemos una propuesta adaptada para todas las
+        promociones.
+      </p>
+
       <p>
         <Link href="/">Volver a la página principal</Link>
       </p>
