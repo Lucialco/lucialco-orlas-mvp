@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 const LUCIA_PHONE_E164 = "34606849914";
-const WHATSAPP_LINK = `https://wa.me/${LUCIA_PHONE_E164}`;
 
 const LS_PROVINCIA = "lucialco_orlas_provincia";
 const LS_MODALIDAD = "lucialco_orlas_modalidad";
@@ -36,6 +35,8 @@ export default function PresupuestoClient() {
   const tpl = tplOld || tplNew;
   const cat = catOld || catNew;
 
+  const tipoQS = (sp.get("tipo") || "").toLowerCase();
+
   const [provincia, setProvincia] = useState("");
   const [modalidad, setModalidad] = useState<ModalidadOrla | null>(null);
 
@@ -44,6 +45,42 @@ export default function PresupuestoClient() {
   const provinciaOk = !!provincia;
 
   const goPlantillas = () => router.push("/plantillas");
+
+  useEffect(() => {
+
+    try {
+
+      const p = localStorage.getItem(LS_PROVINCIA) || "";
+      const m = (localStorage.getItem(LS_MODALIDAD) || "") as ModalidadOrla;
+
+      if (p) setProvincia(p);
+      if (m) setModalidad(m);
+
+    } catch {}
+
+  }, []);
+
+  useEffect(() => {
+
+    if (!tpl) return;
+    if (!provinciaOk) return;
+    if (modalidad) return;
+
+    setModalidad(esLocal ? "local_plantilla" : "digital_plantilla");
+
+  }, [tpl, provinciaOk, esLocal]);
+
+  useEffect(() => {
+
+    if (provincia) localStorage.setItem(LS_PROVINCIA, provincia);
+
+  }, [provincia]);
+
+  useEffect(() => {
+
+    if (modalidad) localStorage.setItem(LS_MODALIDAD, modalidad);
+
+  }, [modalidad]);
 
   return (
 
@@ -57,7 +94,8 @@ export default function PresupuestoClient() {
         Solicitar presupuesto de orla 🎓
       </h1>
 
-      {/* BLOQUE COMERCIAL NUEVO */}
+
+      {/* BLOQUE NUEVO */}
 
       <div
         style={{
@@ -70,22 +108,23 @@ export default function PresupuestoClient() {
           lineHeight: "1.6",
         }}
       >
-        <b>Graduaciones múltiples</b><br />
+        <b>Graduaciones múltiples</b><br/>
 
         Muchos colegios realizan varias graduaciones el mismo curso
-        (por ejemplo infantil, primaria o secundaria).
+        (infantil, primaria o secundaria).
 
-        Si vuestro centro prepara varias orlas, podéis pedir presupuesto
-        para una o para varias promociones.
+        Si vuestro centro prepara varias orlas podéis pedir presupuesto
+        para una o varias promociones.
 
-        Si finalmente se realizan varias con nosotros,
-        podemos valorar condiciones especiales para el conjunto.
+        Si finalmente se realizan varias con nosotros podremos valorar
+        condiciones especiales para el conjunto.
 
-        <br /><br />
+        <br/><br/>
 
-        💡 Si lo necesitáis podéis comentarlo internamente en el centro
-        antes de solicitar el presupuesto definitivo.
+        💡 Podéis comentarlo internamente en el centro antes de solicitar
+        el presupuesto definitivo.
       </div>
+
 
       <p style={{ color: "var(--muted)", lineHeight: 1.5 }}>
         Primero provincia. Luego eliges plantilla o exclusiva según la modalidad disponible.
@@ -199,7 +238,7 @@ export default function PresupuestoClient() {
       )}
 
 
-      {/* PLANTILLA SELECCIONADA */}
+      {/* PLANTILLA */}
 
       {modalidad?.endsWith("plantilla") && tpl && (
 
@@ -246,6 +285,18 @@ export default function PresupuestoClient() {
       )}
 
     </div>
+
   );
+
 }
 
+function Field({ label, children }: { label: string; children: ReactNode }) {
+
+  return (
+    <div style={{ display: "grid", gap: 6 }}>
+      <label style={{ fontWeight: 800 }}>{label}</label>
+      {children}
+    </div>
+  );
+
+}
