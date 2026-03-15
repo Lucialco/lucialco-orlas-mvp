@@ -832,8 +832,28 @@ export default function PresupuestoClient() {
                   </div>
 
                   <div className="card" style={{ background: "white", border: "1px solid var(--border)" }}>
-                    <div style={{ fontWeight: 900, marginBottom: 8 }}>Resumen</div>
+  <div style={{ fontWeight: 900, marginBottom: 8 }}>Resumen</div>
 
+  <div
+    style={{
+      marginBottom: 12,
+      padding: 12,
+      borderRadius: 12,
+      background: "#eff6ff",
+      border: "1px solid #bfdbfe",
+      color: "#1e3a8a",
+      fontWeight: 700,
+      lineHeight: 1.5,
+      fontSize: 14,
+    }}
+  >
+    💡 <b>Centros con varias graduaciones</b><br />
+    Si vuestro colegio realiza <b>más de una graduación</b> el mismo curso
+    (por ejemplo <b>infantil + primaria</b> o <b>infantil + primaria + secundaria</b>),
+    podemos <b>revisar el presupuesto global</b> y aplicar condiciones especiales.
+  </div>
+
+  {!quote && alumnos > 0 && modalidad && (
                     {!quote && alumnos > 0 && modalidad && (
                       <div style={{ color: "var(--muted)" }}>
                         {quoteLoading ? "Calculando…" : "No se pudo calcular. Revisa conexión."}
