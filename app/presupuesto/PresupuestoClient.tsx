@@ -24,7 +24,7 @@ const PRICE = {
   digital_exclusiva: 10.5,
   envio_nacional: 15,
 
-  extra_beca: 5,
+  extra_beca: 7.5,
   extra_taza: 9.5,
   extra_sobre: 3,
   extra_fotos_recuerdo: 4.5,
