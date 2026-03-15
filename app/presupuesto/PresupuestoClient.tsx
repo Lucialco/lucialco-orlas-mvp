@@ -441,7 +441,7 @@ export default function PresupuestoClient() {
         </>
       )}
     </div>
-  );
+  
 
   return (
     <div>
