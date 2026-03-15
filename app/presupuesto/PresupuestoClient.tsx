@@ -440,8 +440,11 @@ export default function PresupuestoClient() {
           </div>
         </>
       )}
-    </div>
+  </div>
+);
   
+return (
+  <div>
 
   return (
     <div>
@@ -853,8 +856,7 @@ export default function PresupuestoClient() {
     podemos <b>revisar el presupuesto global</b> y aplicar condiciones especiales.
   </div>
 
-  {!quote && alumnos > 0 && modalidad && (
-                    {!quote && alumnos > 0 && modalidad && (
+                   {!quote && alumnos > 0 && modalidad && (
                       <div style={{ color: "var(--muted)" }}>
                         {quoteLoading ? "Calculando…" : "No se pudo calcular. Revisa conexión."}
                       </div>
