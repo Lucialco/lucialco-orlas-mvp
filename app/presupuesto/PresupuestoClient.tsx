@@ -442,12 +442,8 @@ export default function PresupuestoClient() {
       )}
   </div>
 );
-  
 return (
   <div>
-
-  return (
-    <div>
       <style jsx global>{`
         .inputError {
           border: 1px solid #ef4444 !important;
