@@ -909,7 +909,17 @@ export default function PresupuestoClient() {
                       : "Enviar presupuesto"}
                   </button>
 
-                  {status === "sent" && <div style={okBox}>✅ Enviado. Te llegará por email con validez 15 días.</div>}
+                  {status === "sent" && (
+  <div style={okBox}>
+    ✅ Presupuesto enviado. Te llegará por email con validez 15 días.
+
+    <div style={{ marginTop: 10, fontWeight: 600, lineHeight: 1.5 }}>
+      💡 Si vuestro centro realiza <b>más de una graduación</b> el mismo año
+      (por ejemplo <b>infantil + primaria</b> o <b>infantil + primaria + secundaria</b>),
+      podemos <b>revisar el precio del conjunto</b> y aplicar condiciones especiales.
+    </div>
+  </div>
+)}
                   {status === "error" && <div style={errBox}>❌ No se pudo enviar. Revisa los datos o escribe por WhatsApp.</div>}
                 </form>
               </div>
