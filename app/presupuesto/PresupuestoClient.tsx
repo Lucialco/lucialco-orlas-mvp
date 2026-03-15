@@ -644,7 +644,7 @@ return (
                     try {
                       const res = await fetch(
                         
-                        "https://script.google.com/macros/s/AKfycbx-EiGB1FcdRi8AtVJMvDITA0k1I-uOnTjqKbGLkfriGXxReR4Ds954YlOrQ6cCPzAzXA/exec",
+                        "https://script.google.com/macros/s/AKfycbwsZRLrh4aBvdruNxAoGzAhzgyzwvrTsdhTEAbhFr7U6qqkMqil5MxZUkdCAvJBSsri0g/exec",
                         {
                           method: "POST",
                           headers: { "Content-Type": "text/plain;charset=utf-8" },
