@@ -9,7 +9,7 @@ type CarouselItem = {
   title: string;
   subtitle: string;
   href: string;
-  img: string; // desde /public
+  img: string;
 };
 
 function clampIndex(i: number, len: number) {
@@ -84,7 +84,6 @@ export default function HomeClient() {
   const current = items[clampIndex(idx, items.length)];
   const [imgOk, setImgOk] = useState(true);
 
-  // Si cambias de slide, asumimos OK hasta que falle.
   const onPrev = () => {
     setImgOk(true);
     setIdx((p) => clampIndex(p - 1, items.length));
@@ -94,7 +93,6 @@ export default function HomeClient() {
     setIdx((p) => clampIndex(p + 1, items.length));
   };
 
-  // ✅ Botón un pelín más pequeño y texto centrado
   const btnCell: React.CSSProperties = {
     width: "100%",
     minHeight: 42,
@@ -109,7 +107,7 @@ export default function HomeClient() {
 
   return (
     <div>
-      {/* Hero */}
+      {/* HERO */}
       <section style={{ padding: "36px 0" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 24 }}>
           <div>
@@ -134,7 +132,6 @@ export default function HomeClient() {
               Nosotras nos ocupamos del resto. Y sí: <b>puedes hablar con nosotras en todo momento</b>.
             </p>
 
-            {/* ✅ Botones mismo tamaño + “Ver plantillas” a la izquierda (más pequeños y centrados) */}
             <div
               style={{
                 marginTop: 18,
@@ -157,36 +154,14 @@ export default function HomeClient() {
             </div>
 
             <p style={{ marginTop: 10, color: "var(--muted)", fontSize: 13 }}>Respuesta rápida · Proceso claro</p>
-
-            <div style={{ marginTop: 22, display: "grid", gap: 10 }}>
-              {[
-                "Fotografía profesional en el centro",
-                "Retoque natural y diseño cuidado",
-                "Proceso claro, sin sorpresas",
-                "Comunicación directa en todo momento",
-              ].map((t) => (
-                <div
-                  key={t}
-                  className="card"
-                  style={{ padding: "10px 12px", display: "flex", gap: 10, alignItems: "center" }}
-                >
-                  <span aria-hidden style={{ fontWeight: 900, color: "var(--brand-hover)" }}>
-                    ✓
-                  </span>
-                  <span style={{ color: "var(--text)" }}>{t}</span>
-                </div>
-              ))}
-            </div>
           </div>
 
-          {/* ✅ SOLO carrusel */}
+          {/* CARRUSEL */}
           <div className="card" style={{ background: "var(--brand-soft)", height: "fit-content" }}>
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
               <div>
                 <div style={{ fontWeight: 900, fontSize: 16 }}>Destacados</div>
-                <div style={{ marginTop: 6, color: "var(--muted)", lineHeight: 1.55 }}>
-                  Plantillas y extras más elegidos.
-                </div>
+                <div style={{ marginTop: 6, color: "var(--muted)" }}>Plantillas y extras más elegidos.</div>
               </div>
 
               <div style={{ display: "flex", gap: 8 }}>
@@ -197,16 +172,7 @@ export default function HomeClient() {
 
             <div className="card" style={{ marginTop: 12, padding: 0, overflow: "hidden" }}>
               <a href={current?.href || "/plantillas"} style={{ textDecoration: "none", display: "block" }}>
-                <div
-                  style={{
-                    width: "100%",
-                    aspectRatio: "16/10",
-                    background: "white",
-                    position: "relative",
-                    borderBottom: "1px solid var(--border)",
-                  }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                <div style={{ width: "100%", aspectRatio: "16/10", background: "white", position: "relative" }}>
                   <img
                     src={current?.img}
                     alt={current?.title || "Destacado"}
@@ -220,159 +186,59 @@ export default function HomeClient() {
                     onLoad={() => setImgOk(true)}
                     onError={() => setImgOk(false)}
                   />
-
-                  {!imgOk && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        color: "var(--muted)",
-                        fontWeight: 900,
-                        padding: 12,
-                        textAlign: "center",
-                      }}
-                    >
-                      {current?.title}
-                    </div>
-                  )}
                 </div>
 
                 <div style={{ padding: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 900, color: "var(--text)" }}>{current?.title}</div>
-                      <div style={{ marginTop: 4, color: "var(--muted)", lineHeight: 1.45 }}>{current?.subtitle}</div>
-                    </div>
-
-                    <span
-                      style={{
-                        border: "1px solid var(--border)",
-                        background: "white",
-                        borderRadius: 999,
-                        padding: "6px 10px",
-                        fontSize: 12,
-                        fontWeight: 900,
-                        color: "var(--brand-hover)",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {current?.kind === "extra" ? "Extra" : "Plantilla"}
-                    </span>
-                  </div>
+                  <div style={{ fontWeight: 900 }}>{current?.title}</div>
+                  <div style={{ color: "var(--muted)" }}>{current?.subtitle}</div>
                 </div>
               </a>
-            </div>
-
-            <div style={{ marginTop: 12, display: "flex", justifyContent: "center", gap: 6 }}>
-              {items.map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  aria-label={`Ir al destacado ${i + 1}`}
-                  onClick={() => {
-                    setImgOk(true);
-                    setIdx(i);
-                  }}
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: 999,
-                    border: "none",
-                    background: i === clampIndex(idx, items.length) ? "var(--brand)" : "rgba(0,0,0,0.18)",
-                    cursor: "pointer",
-                  }}
-                />
-              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* How it works */}
+      {/* HOW IT WORKS */}
       <section style={{ padding: "10px 0 10px" }}>
         <h2 style={{ fontSize: 26, margin: "0 0 14px" }}>Cómo funciona</h2>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
           {[
-            { n: "1", icon: "📝", t: "Pide presupuesto", d: "Cuéntanos curso, número de alumnos y fechas orientativas." },
-            { n: "2", icon: "📅", t: "Reservamos fecha", d: "Concretamos el día de las fotos y bloqueamos el hueco en el calendario." },
-            { n: "3", icon: "📸🎨", t: "Sesión de fotos + diseño", d: "Hacemos las fotos y diseñamos la orla." },
-            { n: "4", icon: "✅📦", t: "Entrega y revisión", d: "Te enseñamos el resultado y cerramos la entrega." },
+            { n: "1", t: "Pide presupuesto", d: "Cuéntanos curso, número de alumnos y fechas orientativas." },
+            { n: "2", t: "Reservamos fecha", d: "Concretamos el día de las fotos." },
+            { n: "3", t: "Fotos y diseño", d: "Hacemos las fotos y diseñamos la orla." },
+            { n: "4", t: "Entrega", d: "Revisamos contigo y entregamos el resultado final." },
           ].map((s) => (
             <div key={s.n} className="card">
-              {/* ✅ Número + icono alineados */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                <div
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 10,
-                    background: "var(--brand)",
-                    color: "white",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontWeight: 900,
-                  }}
-                >
-                  {s.n}
-                </div>
-                <div style={{ fontSize: 20, lineHeight: 1 }}>{s.icon}</div>
-              </div>
-
               <div style={{ fontWeight: 900 }}>{s.t}</div>
-              <div style={{ color: "var(--muted)", marginTop: 6, lineHeight: 1.45 }}>{s.d}</div>
+              <div style={{ color: "var(--muted)" }}>{s.d}</div>
             </div>
           ))}
         </div>
+      </section>
 
-        {/* ✅ ESTA PARTE NO SE TOCA: Creatividad humana */}
-        <div className="card" style={{ marginTop: 18, background: "white" }}>
-          <div className="badge">Creatividad humana</div>
-          <div style={{ fontWeight: 900, marginTop: 10 }}>Aquí no hay automatismos sin alma.</div>
-          <p style={{ margin: "8px 0 0", color: "var(--muted)", lineHeight: 1.55 }}>
-            Cada orla se fotografía, retoca y diseña <b>persona a persona</b>. Atención real y resultados que representan al
-            grupo.
-          </p>
-        </div>
+      {/* BLOQUE SEO (nuevo) */}
+      <section style={{ marginTop: 40 }}>
+        <h2>Orlas escolares personalizadas para colegios</h2>
 
-        {/* ✅ ESTA PARTE NO SE TOCA: CTA final */}
-        <div
-          className="card"
-          style={{
-            marginTop: 18,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap",
-          }}
-        >
-          <div>
-            <div style={{ fontWeight: 900, fontSize: 18 }}>¿Lista la orla, sin dolores de cabeza?</div>
-            <div style={{ color: "var(--muted)", marginTop: 4 }}>Elige plantilla o pide diseño a medida.</div>
-          </div>
+        <p>
+          En Lucialco diseñamos <strong>orlas escolares personalizadas</strong> para centros de educación infantil,
+          primaria y secundaria. Nos encargamos de todo el proceso: fotografía, retoque y diseño final de la orla.
+        </p>
 
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <a href="/plantillas" className="btnPrimary">
-              Ver plantillas
-            </a>
-            <a href="/presupuesto?tipo=adhoc" className="btnOutline">
-              Diseño a medida
-            </a>
-            <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer" className="btnOutline">
-              Habla con nosotras
-            </a>
-          </div>
-        </div>
+        <p>
+          Nuestro objetivo es que cada colegio pueda organizar su orla de fin de curso de forma sencilla y sin
+          complicaciones, con un resultado cuidado y profesional para cada promoción.
+        </p>
+
+        <p>
+          Trabajamos con <strong>orlas escolares para infantil, primaria y secundaria</strong>, adaptando el estilo al
+          centro educativo y ofreciendo plantillas o diseños totalmente personalizados.
+        </p>
       </section>
     </div>
   );
 }
-
 
 
 
