@@ -1,5 +1,6 @@
 import HomeClient from "./HomeClient";
 import type { Metadata } from "next";
+import Script from "next/script";
 
 export const metadata: Metadata = {
   title: "Orlas escolares personalizadas para colegios | Lucialco",
@@ -38,5 +39,27 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <HomeClient />;
+  return (
+    <>
+      {/* Schema SEO */}
+      <Script
+        id="schema-lucialco"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            name: "Lucialco Orlas",
+            url: "https://orlas.lucialco.es",
+            logo: "https://orlas.lucialco.es/brand/logo.jpg",
+            sameAs: [
+              "https://lucialco.es"
+            ]
+          }),
+        }}
+      />
+
+      <HomeClient />
+    </>
+  );
 }
