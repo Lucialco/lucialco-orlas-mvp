@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import "./globals.css";
 import HamburgerMenu from "./components/HamburgerMenu";
-// import ChatWidget from "./components/ChatWidget"; // ✅ Quitamos el bot
 
 const GTM_ID = "GTM-T9LNC454";
 
@@ -12,6 +11,30 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es">
       <head>
+
+        {/* SEO básico */}
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="canonical" href="https://orlas.lucialco.es/" />
+
+        {/* Open Graph */}
+        <meta property="og:title" content="Orlas escolares personalizadas para colegios | Lucialco" />
+        <meta
+          property="og:description"
+          content="Diseño de orlas escolares personalizadas para infantil, primaria y secundaria. Proceso fácil para el colegio y entrega lista para imprimir."
+        />
+        <meta property="og:url" content="https://orlas.lucialco.es/" />
+        <meta property="og:type" content="website" />
+        <meta property="og:image" content="https://orlas.lucialco.es/brand/logo.jpg" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Orlas escolares personalizadas para colegios | Lucialco" />
+        <meta
+          name="twitter:description"
+          content="Diseño de orlas escolares personalizadas para infantil, primaria y secundaria."
+        />
+        <meta name="twitter:image" content="https://orlas.lucialco.es/brand/logo.jpg" />
+
         {/* Google Tag Manager */}
         <Script
           id="gtm-head"
@@ -41,7 +64,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </noscript>
         {/* End Google Tag Manager (noscript) */}
 
-        {/* Cookie Consent (TermsFeed) */}
+        {/* Cookie Consent */}
         <Script
           id="termsfeed-cookieconsent-lib"
           src="https://www.termsfeed.com/public/cookie-consent/4.2.0/cookie-consent.js"
@@ -97,7 +120,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           `}
         </Script>
 
-        {/* ===== HEADER DE MARCA ===== */}
+        {/* HEADER */}
         <header className="siteHeader siteHeader--pro">
           <div
             className="siteHeaderInner"
@@ -120,20 +143,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               />
             </Link>
 
-            {/* ✅ Solo hamburguesa (FAQ va dentro del menú) */}
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <HamburgerMenu />
             </div>
           </div>
         </header>
 
-        {/* Contenido */}
+        {/* CONTENIDO */}
         <main className="page">{children}</main>
 
-        {/* ✅ Quitamos el bot */}
-        {/* <ChatWidget /> */}
-
-        {/* Footer */}
+        {/* FOOTER */}
         <footer className="footer">
           <div className="footerInner">
             <div>© {new Date().getFullYear()} Lucialco Orlas</div>
