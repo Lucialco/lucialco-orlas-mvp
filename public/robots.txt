@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://lucialco.es/sitemap.xml
+Sitemap: https://orlas.lucialco.es/sitemap.xml
