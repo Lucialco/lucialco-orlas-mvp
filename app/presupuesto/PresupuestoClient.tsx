@@ -5,6 +5,29 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 const LUCIA_PHONE_E164 = "34606849914";
 const WHATSAPP_LINK = `https://wa.me/${LUCIA_PHONE_E164}`;
+const GADS_TRACKING_ID = "AW-992205118/l7k7CMb90oIYEL6yj9kD";
+
+function gtagTrackEvent(eventName: string, params?: Record<string, unknown>) {
+  if (typeof window === "undefined") return;
+  const gtag = (window as any).gtag;
+  if (typeof gtag !== "function") return;
+  try {
+    gtag("event", eventName, params || {});
+  } catch {
+    // ignore tracking errors in the client
+  }
+}
+
+function trackWhatsAppClick() {
+  gtagTrackEvent("whatsapp_click", {
+    event_category: "engagement",
+    event_label: "WhatsApp botón presupuesto",
+  });
+}
+
+function trackBudgetConversion() {
+  gtagTrackEvent("conversion", { send_to: GADS_TRACKING_ID });
+}
 
 const LS_PROVINCIA = "lucialco_orlas_provincia";
 const LS_MODALIDAD = "lucialco_orlas_modalidad";
@@ -653,6 +676,7 @@ return (
                       );
 
                       if (res.ok) {
+                        trackBudgetConversion();
                         setStatus("sent");
                         setErrors({});
                         setFormMsg("");
@@ -943,7 +967,13 @@ return (
               </div>
 
               <div style={{ marginTop: 14 }}>
-                <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer" style={{ color: "var(--brand-hover)", fontWeight: 900, textDecoration: "none" }}>
+                <a
+                  href={WHATSAPP_LINK}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={trackWhatsAppClick}
+                  style={{ color: "var(--brand-hover)", fontWeight: 900, textDecoration: "none" }}
+                >
                   💬 Si prefieres, escribe directamente por WhatsApp
                 </a>
               </div>

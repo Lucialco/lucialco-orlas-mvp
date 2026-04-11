@@ -15,7 +15,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
         {/* SEO básico */}
         <link rel="icon" href="/favicon.ico" />
-        <link rel="canonical" href="https://orlas.lucialco.es/" />
 
         {/* Open Graph */}
         <meta property="og:title" content="Orlas escolares personalizadas para colegios | Lucialco" />
