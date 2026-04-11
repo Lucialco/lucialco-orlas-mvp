@@ -6,6 +6,7 @@ import "./globals.css";
 import HamburgerMenu from "./components/HamburgerMenu";
 
 const GTM_ID = "GTM-T9LNC454";
+const GADS_ID = "AW-992205118";
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -50,6 +51,28 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           }}
         />
         {/* End Google Tag Manager */}
+
+        {/* Google Ads Tag */}
+        <Script
+          id="gads-tag"
+          async
+          src={`https://www.googletagmanager.com/gtag/js?id=${GADS_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script
+          id="gads-config"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${GADS_ID}');
+            `,
+          }}
+        />
+        {/* End Google Ads Tag */}
+
       </head>
 
       <body>
