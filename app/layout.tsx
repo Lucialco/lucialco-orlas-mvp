@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import "./globals.css";
+import ChatBot from "./components/ChatBot";
 import HamburgerMenu from "./components/HamburgerMenu";
 
 const GTM_ID = "GTM-T9LNC454";
@@ -173,6 +174,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
         {/* CONTENIDO */}
         <main className="page">{children}</main>
+
+        <ChatBot />
 
         {/* FOOTER */}
         <footer className="footer">
