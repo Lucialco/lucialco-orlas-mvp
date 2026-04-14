@@ -84,7 +84,7 @@ function getBotResponse(question: string): ChatMessage {
     return {
       role: "assistant",
       text:
-        "Ofrecemos orlas escolares para infantil, primaria y secundaria. Modalidad digital desde 8€/alumno y exclusiva desde 10.50€/alumno. El transporte es aprox. 15€/pedido. Extras: sobres reforzados con nombre 3€/niño y fotos de recuerdo 4.50€/alumno.",
+        "Ofrecemos orlas escolares para infantil, primaria y secundaria. En Madrid y Toledo, la modalidad presencial es desde 11.50€/alumno con plantilla o 15€/alumno en exclusiva. Para el resto de España, la modalidad digital es desde 9€/alumno con plantilla o 10.50€/alumno en exclusiva. El transporte es aprox. 15€/pedido. Extras: sobres reforzados con nombre 3€/niño y fotos de recuerdo 4.50€/alumno.",
     };
   }
 
@@ -158,7 +158,13 @@ export default function ChatBot() {
   const hasFallback = useMemo(() => messages.some((message) => message.fallback), [messages]);
 
   const addMessage = (message: ChatMessage) => {
-    setMessages((prev) => [...prev, message]);
+    setMessages((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.role === message.role && last?.text === message.text) {
+        return prev;
+      }
+      return [...prev, message];
+    });
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
